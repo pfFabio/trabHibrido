@@ -4,6 +4,7 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>TEXTO 100% ATUALIZADO</Text>
+      <Text style={styles.text}> EXPO PATCH VIROU MODA </Text>
     </View>
   );
 }

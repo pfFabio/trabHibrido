@@ -118,7 +118,7 @@ export default function SearchScreen() {
           <TouchableOpacity
             style={styles.avatarContainer}
             activeOpacity={0.8}
-            onPress={() => router.push('/perfil')}
+            onPress={() => router.push({ pathname: '/perfil', params: { from: '/' } })}
           >
             <Image
               source={{
@@ -245,20 +245,24 @@ export default function SearchScreen() {
             <Text style={styles.tabLabelActive}>Pesquisa</Text>
           </TouchableOpacity>
 
-          {/* Tab 4: Livros */}
+          {/* Tab 4: Livros (Preparada para navegação quando a tela for adicionada) */}
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => setActiveTab('livros')}
+            onPress={() => {
+              setActiveTab('livros');
+              // Pronto para a futura tela de livros:
+              // router.push('/livros');
+            }}
             activeOpacity={0.7}
           >
             <Ionicons name="book-outline" size={22} color="#8E918F" />
             <Text style={styles.tabLabelInactive}>Livros</Text>
           </TouchableOpacity>
 
-          {/* Tab 5: Você (Navega para a tela de Perfil) */}
+          {/* Tab 5: Você (Navega para a tela de Perfil informando a origem) */}
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => router.push('/perfil')}
+            onPress={() => router.push({ pathname: '/perfil', params: { from: '/' } })}
             activeOpacity={0.7}
           >
             <Ionicons name="person-outline" size={22} color="#8E918F" />

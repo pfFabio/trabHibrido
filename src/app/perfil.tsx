@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 interface MenuItem {
   id: string;
@@ -72,6 +72,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ from?: string }>();
+  // Origem de onde a tela de perfil foi aberta (padrão '/' se não especificado, pronto para '/livros' etc.)
+  const fromRoute = params.from || '/';
   const insets = useSafeAreaInsets();
 
   // Animações de transição suave (deslize da direita para a esquerda)
@@ -128,7 +131,11 @@ export default function ProfileScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace(fromRoute as any);
+      }
     });
   };
 
@@ -148,7 +155,11 @@ export default function ProfileScreen() {
           useNativeDriver: true,
         }),
       ]).start(() => {
-        router.replace('/gerenciar');
+        // Passa a tela de origem adiante para que a tela de gerenciamento saiba exatamente para onde retornar
+        router.replace({
+          pathname: '/gerenciar',
+          params: { from: fromRoute },
+        });
       });
     }
   };

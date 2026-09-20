@@ -13,12 +13,15 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function GerenciarAppsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ from?: string }>();
+  // Origem recebida da tela anterior (padrão '/' se não informada, preparado para '/livros' etc.)
+  const fromRoute = params.from || '/';
   const insets = useSafeAreaInsets();
   const [selectedTab, setSelectedTab] = useState<'visao_geral' | 'gerenciar'>('visao_geral');
 
@@ -57,8 +60,8 @@ export default function GerenciarAppsScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Retorna para a tela que estava aberta antes de abrir o perfil (a tela inicial de pesquisa)
-      router.replace('/');
+      // Retorna dinamicamente para a tela que estava aberta antes de abrir o perfil (ex: '/' ou a futura tela '/livros')
+      router.replace(fromRoute as any);
     });
   };
 

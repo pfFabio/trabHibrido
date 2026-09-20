@@ -182,7 +182,11 @@ export default function SearchScreen() {
           </TouchableOpacity>
 
           {/* App Sugerido 2: Shopee */}
-          <TouchableOpacity style={styles.appCard} activeOpacity={0.75}>
+          <TouchableOpacity
+            style={styles.appCard}
+            activeOpacity={0.75}
+            onPress={() => router.push('/booking-detalhes')}
+          >
             <Image
               source={{
                 uri: 'https://placehold.co/96x96/EE4D2D/FFFFFF/png?text=Shopee',

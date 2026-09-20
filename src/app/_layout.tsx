@@ -26,6 +26,13 @@ export default function RootLayout() {
           animationDuration: 420,
         }}
       />
+      <Stack.Screen
+        name="livro-detalhes"
+        options={{
+          animation: 'slide_from_right',
+          animationDuration: 420,
+        }}
+      />
     </Stack>
   );
 }

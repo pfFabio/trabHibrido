@@ -503,16 +503,26 @@ const SCREEN_ADAPTATIONS: BookItem[] = [
 ];
 
 // Componente estilizado de Capa de Livro de Demonstração (Ícone + Nome)
-const BookCard: React.FC<{ book: BookItem; cardWidth?: number; cardHeight?: number }> = ({
+const BookCard: React.FC<{
+  book: BookItem;
+  cardWidth?: number;
+  cardHeight?: number;
+  onPress?: () => void;
+}> = ({
   book,
   cardWidth = 116,
   cardHeight = 174,
+  onPress,
 }) => {
   const isLightBg = book.bgColor === '#FAF7F2' || book.bgColor === '#F4F4F5' || book.bgColor === '#FDF2F8';
   const textColor = isLightBg ? '#18181B' : '#F4F4F5';
 
   return (
-    <TouchableOpacity style={[styles.bookCardContainer, { width: cardWidth }]} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={[styles.bookCardContainer, { width: cardWidth }]}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
       {/* Capa com proporção de livro real */}
       <View style={[styles.bookCoverWrapper, { width: cardWidth, height: cardHeight, backgroundColor: book.bgColor }]}>
         {/* Lombada e relevo 3D do livro */}
@@ -589,6 +599,7 @@ const BookCarouselSection: React.FC<BookCarouselSectionProps> = ({
   marginTop = 0,
   paddingBottom = 0,
 }) => {
+  const router = useRouter();
   const scrollRef = React.useRef<ScrollView>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -712,6 +723,7 @@ const BookCarouselSection: React.FC<BookCarouselSectionProps> = ({
               book={book}
               cardWidth={cardWidth}
               cardHeight={cardHeight}
+              onPress={() => router.push('/livro-detalhes')}
             />
           ))}
         </ScrollView>

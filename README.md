@@ -1,56 +1,119 @@
-# Welcome to your Expo app 👋
+# 📱 Google Play Store Mock • Aplicativo Mobile Híbrido
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Projeto prático desenvolvido para a disciplina de **Aplicativos Híbridos** do curso de **Engenharia de Software** — **Universidade de Vassouras**.
 
-## Get started
+Este aplicativo consiste na reprodução em alta fidelidade visual da interface da **Google Play Store**, adotando as diretrizes do **Material Design 3 (Material You Dark Theme)**, navegação por grafo de telas e simulação interativa de 6 telas com React Native e Expo.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 🎯 Objetivo do Projeto
 
-2. Start the app
+Simular com precisão a experiência de um usuário real na Google Play Store, exercitando os conceitos fundamentais de desenvolvimento híbrido mobile abordados na disciplina:
+- **Camadas de Arquitetura:** Apresentação (UI), Estado e Dados.
+- **Navegação Declarativa e Grafo de Telas:** Roteamento baseado em arquivos com **Expo Router**.
+- **Design Nativo & Componentização:** Tokens de design centralizados, áreas seguras (`SafeAreaView` e `useSafeAreaInsets`) e layout responsivo.
+- **Gerenciamento de Recursos:** Componentização com placeholders de imagens, listas virtuais e estados interativos.
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## 🗺️ As 6 Telas do Aplicativo
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+O ecossistema do app é estruturado em torno das 5 abas principais da Play Store, integradas a uma tela individual de detalhes do aplicativo:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+```mermaid
+graph TD
+    subgraph BottomNav [Barra de Navegação Inferior Fixa]
+        A[Tela 2: Jogos]
+        B[Tela 3: Apps]
+        C[Tela 1: Pesquisa / Explorar]
+        D[Tela 5: Livros]
+        E[Tela 6: Você / Perfil]
+    end
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+    C -->|Tocar em um App ou Card| F[Tela 4: Detalhes do App / Instalação]
+    A -->|Tocar em um Jogo| F
+    B -->|Tocar em um App| F
+    F -->|Voltar| C
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Detalhamento das Telas:
 
-### Other setup steps
+| # | Tela | Rota / Arquivo | Descrição e Recursos |
+| :-: | :--- | :--- | :--- |
+| **1** | **Pesquisa & Explorar** | `src/app/index.tsx` | Barra de busca em cápsula com comando de voz e foto de perfil, grid 2 colunas com 10 categorias de jogos com ícones temáticos, cards patrocinados (Booking.com e Shopee) com notas e tamanhos, e rodapé sempre fixo. |
+| **2** | **Jogos (Feed)** | `src/app/jogos.tsx` | Carrossel de jogos em destaque, lista dos "Mais Populares" e "Em Alta", categorias e badges de avaliação. |
+| **3** | **Apps (Feed)** | `src/app/apps.tsx` | Vitrine de aplicativos essenciais, produtividade, redes sociais, ferramentas recomendadas e seleções dos editores. |
+| **4** | **Detalhes do App** | `src/app/detalhes/[id].tsx` | Página individual de instalação com logotipo, capturas de tela em carrossel horizontal, botão interativo "Instalar" com barra de progresso simulada, resenhas e dados do desenvolvedor. |
+| **5** | **Livros (Play Livros)** | `src/app/livros.tsx` | Catálogo de e-books e audiolivros mais vendidos, sinopses e botão de prévia de leitura. |
+| **6** | **Você (Perfil & Ajustes)** | `src/app/voce.tsx` | Painel da conta Google com saldo de Play Points, fila de atualizações pendentes, gerenciamento de apps instalados e configurações de segurança. |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+---
 
-## Learn more
+## 🛠️ Tecnologias e Dependências
 
-To learn more about developing your project with Expo, look at the following resources:
+- **Framework:** [Expo](https://expo.dev/) (SDK 57)
+- **Biblioteca Base:** [React Native](https://reactnative.dev/) (0.86) & [React](https://react.dev/) (19)
+- **Roteamento:** [Expo Router](https://docs.expo.dev/router/introduction/) (File-based navigation)
+- **Linguagem:** [TypeScript](https://www.typescriptlang.org/) (Tipagem estrita)
+- **Ícones & Vetores:** [@expo/vector-icons](https://icons.expo.fyi/) (Ionicons & MaterialCommunityIcons)
+- **Tratamento de Áreas Seguras:** `react-native-safe-area-context`
+- **Estilização:** `StyleSheet` nativo com paleta Material 3 Dark (`#131314`, `#1F2023`, `#282A2C`, `#004A77`, `#C2E7FF`)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+## 🚀 Como Executar o Projeto
 
-Join our community of developers creating universal apps.
+### Pré-requisitos
+- **Node.js** (versão LTS recomendada: 18, 20 ou 22)
+- **npm** ou **yarn**
+- Aplicativo **Expo Go** instalado no smartphone (opcional, para testes no dispositivo físico)
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 1. Clonar o Repositório e Instalar Dependências
+```powershell
+git clone https://github.com/pfFabio/trabHibrido.git
+cd trabHibrido
+npm install
+```
+
+### 2. Rodar no Navegador (Web)
+```powershell
+npm run web
+```
+> O app abrirá em `http://localhost:8081`. Pressione `F12` no navegador e ative a visão mobile (Responsive / iPhone / Android) para simular o aparelho celular.
+
+### 3. Rodar no Celular Físico (Expo Go)
+```powershell
+npx expo start
+```
+> Abra o app **Expo Go** no Android/iOS e aponte a câmera para o QR Code exibido no terminal.
+
+---
+
+## 🏛️ Estrutura de Pastas
+
+```text
+trabHibrido/
+├── assets/                 # Imagens, ícones e fontes locais
+├── src/
+│   └── app/                # Rotas e telas gerenciadas pelo Expo Router
+│       ├── _layout.tsx     # Layout raiz da Stack de navegação
+│       ├── index.tsx       # Tela 1: Pesquisa & Explorar (com rodapé fixo)
+│       ├── jogos.tsx       # Tela 2: Feed de Jogos
+│       ├── apps.tsx        # Tela 3: Feed de Aplicativos
+│       ├── detalhes/
+│       │   └── [id].tsx    # Tela 4: Detalhes e Instalação do App
+│       ├── livros.tsx      # Tela 5: Play Livros
+│       └── voce.tsx        # Tela 6: Perfil do Usuário e Gerenciamento
+├── package.json            # Dependências e scripts do projeto
+├── tsconfig.json           # Configuração de compilação TypeScript
+└── README.md               # Documentação do projeto acadêmico
+```
+
+---
+
+## 👥 Integrantes do Grupo
+
+*Engenharia de Software — Universidade de Vassouras*
+- **Aluno 1:** [Nome Completo] — Matrícula: [00000000]
+- **Aluno 2:** [Nome Completo] — Matrícula: [00000000]
+- **Aluno 3:** [Nome Completo] — Matrícula: [00000000]

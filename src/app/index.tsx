@@ -158,7 +158,11 @@ export default function SearchScreen() {
           </View>
 
           {/* App Sugerido 1: Booking.com */}
-          <TouchableOpacity style={styles.appCard} activeOpacity={0.75}>
+          <TouchableOpacity
+            style={styles.appCard}
+            activeOpacity={0.75}
+            onPress={() => router.push('/booking-detalhes')}
+          >
             <Image
               source={{
                 uri: 'https://placehold.co/96x96/003580/FFFFFF/png?text=Booking',

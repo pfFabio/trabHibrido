@@ -245,14 +245,10 @@ export default function SearchScreen() {
             <Text style={styles.tabLabelActive}>Pesquisa</Text>
           </TouchableOpacity>
 
-          {/* Tab 4: Livros (Preparada para navegação quando a tela for adicionada) */}
+          {/* Tab 4: Livros */}
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => {
-              setActiveTab('livros');
-              // Pronto para a futura tela de livros:
-              // router.push('/livros');
-            }}
+            onPress={() => router.push('/livros')}
             activeOpacity={0.7}
           >
             <Ionicons name="book-outline" size={22} color="#8E918F" />

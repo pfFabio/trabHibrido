@@ -10,7 +10,8 @@ export default function RootLayout() {
         animationDuration: 420,
       }}
     >
-      <Stack.Screen name="index" />
+      <Stack.Screen name="index" options={{ animation: 'none' }} />
+      <Stack.Screen name="livros" options={{ animation: 'none' }} />
       <Stack.Screen
         name="perfil"
         options={{

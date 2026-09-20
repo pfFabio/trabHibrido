@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 interface MenuItem {
   id: string;
@@ -95,6 +95,25 @@ export default function ProfileScreen() {
     ]).start();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 350,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, [])
+  );
+
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -111,6 +130,27 @@ export default function ProfileScreen() {
     ]).start(() => {
       router.back();
     });
+  };
+
+  const handleMenuItemPress = (item: MenuItem) => {
+    if (item.id === '1') {
+      // Ao clicar em gerenciar apps e dispositivos, a tela de perfil desliza pra direita sumindo do app e a tela gerenciar aparece
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: SCREEN_WIDTH,
+          duration: 320,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0.2,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        router.push('/gerenciar');
+      });
+    }
   };
 
   // Trava de rolagem no navegador web
@@ -217,7 +257,12 @@ export default function ProfileScreen() {
         {/* Card de Opções de Menu */}
         <View style={styles.menuCard}>
           {MENU_ITEMS.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.menuRow} activeOpacity={0.7}>
+            <TouchableOpacity
+              key={item.id}
+              style={styles.menuRow}
+              activeOpacity={0.7}
+              onPress={() => handleMenuItemPress(item)}
+            >
               <Ionicons name={item.iconName} size={21} color="#C4C7C5" style={styles.menuIcon} />
               <Text style={styles.menuTitle}>{item.title}</Text>
               {item.badge ? (

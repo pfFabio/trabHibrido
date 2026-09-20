@@ -644,58 +644,56 @@ export default function BookingDetailsScreen() {
         </ScrollView>
 
         {/* ============================================================== */}
-        {/* MENU INFERIOR FIXO (Apenas na versão Mobile)                   */}
+        {/* MENU INFERIOR FIXO (Material 3 Style - Mantido em Mobile e PC) */}
         {/* ============================================================== */}
-        {!isPC && (
-          <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-            <TouchableOpacity
-              style={styles.tabItem}
-              onPress={() => router.replace('/')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="game-controller-outline" size={22} color="#8E918F" />
-              <Text style={styles.tabLabelInactive}>Jogos</Text>
-            </TouchableOpacity>
+        <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => router.replace('/')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="game-controller-outline" size={22} color="#8E918F" />
+            <Text style={styles.tabLabelInactive}>Jogos</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.tabItem}
-              onPress={() => router.replace('/')}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="view-grid-outline" size={22} color="#8E918F" />
-              <Text style={styles.tabLabelInactive}>Apps</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => router.replace('/')}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="view-grid-outline" size={22} color="#8E918F" />
+            <Text style={styles.tabLabelInactive}>Apps</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.tabItem}
-              onPress={() => router.back()}
-              activeOpacity={0.85}
-            >
-              <View style={styles.activePill}>
-                <Ionicons name="search" size={20} color="#C2E7FF" />
-              </View>
-              <Text style={styles.tabLabelActive}>Pesquisa</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => router.back()}
+            activeOpacity={0.85}
+          >
+            <View style={styles.activePill}>
+              <Ionicons name="search" size={20} color="#C2E7FF" />
+            </View>
+            <Text style={styles.tabLabelActive}>Pesquisa</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.tabItem}
-              onPress={() => router.push('/livros')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="book-outline" size={22} color="#8E918F" />
-              <Text style={styles.tabLabelInactive}>Livros</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => router.push('/livros')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="book-outline" size={22} color="#8E918F" />
+            <Text style={styles.tabLabelInactive}>Livros</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.tabItem}
-              onPress={() => router.push({ pathname: '/perfil', params: { from: '/' } })}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="person-outline" size={22} color="#8E918F" />
-              <Text style={styles.tabLabelInactive}>Você</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => router.push({ pathname: '/perfil', params: { from: '/' } })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-outline" size={22} color="#8E918F" />
+            <Text style={styles.tabLabelInactive}>Você</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -1192,6 +1190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   activePill: {
     backgroundColor: '#004A77',

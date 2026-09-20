@@ -9,6 +9,10 @@ import {
   StatusBar,
   Image,
   Platform,
+  Dimensions,
+  useWindowDimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -499,14 +503,18 @@ const SCREEN_ADAPTATIONS: BookItem[] = [
 ];
 
 // Componente estilizado de Capa de Livro de Demonstração (Ícone + Nome)
-const BookCard: React.FC<{ book: BookItem }> = ({ book }) => {
+const BookCard: React.FC<{ book: BookItem; cardWidth?: number; cardHeight?: number }> = ({
+  book,
+  cardWidth = 116,
+  cardHeight = 174,
+}) => {
   const isLightBg = book.bgColor === '#FAF7F2' || book.bgColor === '#F4F4F5' || book.bgColor === '#FDF2F8';
   const textColor = isLightBg ? '#18181B' : '#F4F4F5';
 
   return (
-    <TouchableOpacity style={styles.bookCardContainer} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.bookCardContainer, { width: cardWidth }]} activeOpacity={0.8}>
       {/* Capa com proporção de livro real */}
-      <View style={[styles.bookCoverWrapper, { backgroundColor: book.bgColor }]}>
+      <View style={[styles.bookCoverWrapper, { width: cardWidth, height: cardHeight, backgroundColor: book.bgColor }]}>
         {/* Lombada e relevo 3D do livro */}
         <View style={[styles.spineEffect, { borderRightColor: isLightBg ? '#E4E4E7' : '#27272A' }]} />
         <View style={styles.bookSpineShadow} />
@@ -518,16 +526,23 @@ const BookCard: React.FC<{ book: BookItem }> = ({ book }) => {
 
         {/* Conteúdo Central: Ícone Temático e Nome */}
         <View style={styles.bookArtFallback}>
-          <View style={[styles.iconCircle, { backgroundColor: book.accentColor + '25', borderColor: book.accentColor + '55' }]}>
+          <View
+            style={[
+              styles.iconCircle,
+              cardWidth > 150 && { width: 50, height: 50, borderRadius: 25 },
+              { backgroundColor: book.accentColor + '25', borderColor: book.accentColor + '55' },
+            ]}
+          >
             <Ionicons
               name={(book.iconName as any) || 'book-outline'}
-              size={24}
+              size={cardWidth > 150 ? 28 : 24}
               color={book.accentColor}
             />
           </View>
           <Text
             style={[
               styles.coverArtworkText,
+              cardWidth > 150 && { fontSize: 12, lineHeight: 17 },
               { color: textColor },
             ]}
             numberOfLines={3}
@@ -557,6 +572,175 @@ const BookCard: React.FC<{ book: BookItem }> = ({ book }) => {
         <Text style={styles.currentPriceText}>{book.price}</Text>
       </View>
     </TouchableOpacity>
+  );
+};
+
+interface BookCarouselSectionProps {
+  title: string;
+  books: BookItem[];
+  marginTop?: number;
+  paddingBottom?: number;
+}
+
+// Seção de Carrossel com Setinhas Flutuantes Estilo Play Store
+const BookCarouselSection: React.FC<BookCarouselSectionProps> = ({
+  title,
+  books,
+  marginTop = 0,
+  paddingBottom = 0,
+}) => {
+  const scrollRef = React.useRef<ScrollView>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const currentX = React.useRef(0);
+  const { width: windowWidth } = useWindowDimensions();
+  const isPC = windowWidth >= 768;
+
+  // Na versão PC, calcula a largura para exibir exatamente os 6 primeiros livros na viewport
+  const hPadding = isPC ? 24 : 16;
+  const cardGap = isPC ? 16 : 14;
+  const maxContentWidth = 1440;
+  const effectiveWidth = Math.min(windowWidth, maxContentWidth);
+
+  const cardWidth = isPC
+    ? Math.max(130, Math.floor((effectiveWidth - hPadding * 2 - cardGap * 5) / 6))
+    : 116;
+  const cardHeight = Math.round(cardWidth * 1.5);
+  const arrowTop = Math.round((cardHeight - 40) / 2);
+
+  const estimatedContentWidth =
+    books.length * cardWidth + (books.length - 1) * cardGap + hPadding * 2;
+  const contentWidth = React.useRef(estimatedContentWidth);
+
+  const checkArrowVisibility = (x: number, cWidth?: number, layWidth?: number) => {
+    currentX.current = x;
+    const totalW = cWidth ?? contentWidth.current;
+    const viewW = layWidth ?? effectiveWidth;
+
+    // Não mostra a setinha para a esquerda no início (primeiro livro)
+    setCanScrollLeft(x > 12);
+
+    // Não mostra a setinha para a direita no fim (último livro)
+    const maxScroll = totalW - viewW;
+    if (maxScroll > 0) {
+      setCanScrollRight(x < maxScroll - 12);
+    } else {
+      setCanScrollRight(true);
+    }
+  };
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    contentWidth.current = contentSize.width;
+    checkArrowVisibility(contentOffset.x, contentSize.width, layoutMeasurement.width);
+  };
+
+  const handleScrollStep = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    const totalW = contentWidth.current > 0 ? contentWidth.current : estimatedContentWidth;
+    const maxScroll = Math.max(0, totalW - effectiveWidth);
+
+    // Paginação de exatamente 6 em 6 livros no PC (ou 3 em telas menores)
+    const pageSize = isPC ? 6 : 3;
+    const slotWidth = cardWidth + cardGap;
+    const pageStep = slotWidth * pageSize;
+
+    let targetX = 0;
+    if (direction === 'right') {
+      // Avança para a próxima seção de 6 livros
+      const currentPage = Math.floor((currentX.current + 10) / pageStep);
+      const nextPage = currentPage + 1;
+      targetX = Math.min(maxScroll, nextPage * pageStep);
+    } else {
+      // Retorna para a seção anterior de 6 livros
+      const currentPage = Math.ceil((currentX.current - 10) / pageStep);
+      const prevPage = currentPage - 1;
+      targetX = Math.max(0, prevPage * pageStep);
+    }
+
+    currentX.current = targetX;
+    checkArrowVisibility(targetX, totalW);
+    scrollRef.current.scrollTo({ x: targetX, animated: true });
+  };
+
+  // Na versão PC/web, as setas só aparecem quando o mouse passa por cima do carrossel
+  const showArrowsOnHover = Platform.OS === 'web' ? isHovered : true;
+  const showLeftArrow = canScrollLeft && showArrowsOnHover;
+  const showRightArrow = canScrollRight && showArrowsOnHover;
+
+  return (
+    <View style={{ marginTop }}>
+      {/* Título da Seção */}
+      <View style={[styles.sectionHeaderRow, { paddingHorizontal: hPadding }]}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity
+          style={styles.circleArrowBtn}
+          activeOpacity={0.7}
+          onPress={() => handleScrollStep('right')}
+        >
+          <Ionicons name="arrow-forward" size={18} color="#E3E3E3" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Carrossel com Setas Flutuantes e Detector de Hover */}
+      <View
+        style={styles.carouselContainer}
+        {...({
+          onMouseEnter: () => setIsHovered(true),
+          onMouseLeave: () => setIsHovered(false),
+        } as any)}
+      >
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          onContentSizeChange={(w) => {
+            contentWidth.current = w;
+            checkArrowVisibility(currentX.current, w);
+          }}
+          contentContainerStyle={[
+            styles.booksRowScroll,
+            { paddingHorizontal: hPadding, gap: cardGap, paddingBottom },
+          ]}
+        >
+          {books.map((book) => (
+            <BookCard
+              key={book.id}
+              book={book}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
+            />
+          ))}
+        </ScrollView>
+
+        {/* Setinha para a esquerda: Não aparece no primeiro livro e só no hover (PC) */}
+        {showLeftArrow && (
+          <TouchableOpacity
+            style={[styles.floatingNavBtn, styles.floatingNavLeft, { top: arrowTop }]}
+            onPress={() => handleScrollStep('left')}
+            activeOpacity={0.85}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="chevron-back" size={22} color="#202124" />
+          </TouchableOpacity>
+        )}
+
+        {/* Setinha para a direita: Não aparece no último livro e só no hover (PC) */}
+        {showRightArrow && (
+          <TouchableOpacity
+            style={[styles.floatingNavBtn, styles.floatingNavRight, { top: arrowTop }]}
+            onPress={() => handleScrollStep('right')}
+            activeOpacity={0.85}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="chevron-forward" size={22} color="#202124" />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 };
 
@@ -704,58 +888,25 @@ export default function BooksScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Seção 1: E-books por menos de R$ 5 */}
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>E-books por menos de R$ 5</Text>
-            <TouchableOpacity style={styles.circleArrowBtn} activeOpacity={0.7}>
-              <Ionicons name="arrow-forward" size={18} color="#E3E3E3" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.booksRowScroll}
-          >
-            {EBOOKS_SUB_5.map((book) => (
-              <BookCard key={book.id} book={book} />
-            ))}
-          </ScrollView>
+          <BookCarouselSection
+            title="E-books por menos de R$ 5"
+            books={EBOOKS_SUB_5}
+          />
 
           {/* Seção 2: Os mais vendidos */}
-          <View style={[styles.sectionHeaderRow, { marginTop: 22 }]}>
-            <Text style={styles.sectionTitle}>Os mais vendidos</Text>
-            <TouchableOpacity style={styles.circleArrowBtn} activeOpacity={0.7}>
-              <Ionicons name="arrow-forward" size={18} color="#E3E3E3" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.booksRowScroll}
-          >
-            {BEST_SELLERS.map((book) => (
-              <BookCard key={book.id} book={book} />
-            ))}
-          </ScrollView>
+          <BookCarouselSection
+            title="Os mais vendidos"
+            books={BEST_SELLERS}
+            marginTop={22}
+          />
 
           {/* Seção 3: Livros levados para a tela */}
-          <View style={[styles.sectionHeaderRow, { marginTop: 22 }]}>
-            <Text style={styles.sectionTitle}>Livros levados para a tela</Text>
-            <TouchableOpacity style={styles.circleArrowBtn} activeOpacity={0.7}>
-              <Ionicons name="arrow-forward" size={18} color="#E3E3E3" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.booksRowScroll, { paddingBottom: 28 }]}
-          >
-            {SCREEN_ADAPTATIONS.map((book) => (
-              <BookCard key={book.id} book={book} />
-            ))}
-          </ScrollView>
+          <BookCarouselSection
+            title="Livros levados para a tela"
+            books={SCREEN_ADAPTATIONS}
+            marginTop={22}
+            paddingBottom={28}
+          />
         </ScrollView>
 
         {/* Bottom Navigation Bar (Material 3 Style - Fixo no Rodapé) */}
@@ -915,6 +1066,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 16,
     paddingBottom: 16,
+    maxWidth: 1440,
+    alignSelf: 'center',
+    width: '100%',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -936,6 +1090,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1F22',
     alignItems: 'center',
     justifyContent: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  carouselContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  floatingNavBtn: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  floatingNavLeft: {
+    left: 8,
+  },
+  floatingNavRight: {
+    right: 8,
   },
   booksRowScroll: {
     paddingHorizontal: 16,

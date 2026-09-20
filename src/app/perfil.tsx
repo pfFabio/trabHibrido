@@ -148,7 +148,7 @@ export default function ProfileScreen() {
           useNativeDriver: true,
         }),
       ]).start(() => {
-        router.push('/gerenciar');
+        router.replace('/gerenciar');
       });
     }
   };

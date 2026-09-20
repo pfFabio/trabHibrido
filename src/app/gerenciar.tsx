@@ -47,7 +47,7 @@ export default function GerenciarAppsScreen() {
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: SCREEN_WIDTH,
-        duration: 300,
+        duration: 320,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -57,7 +57,8 @@ export default function GerenciarAppsScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      router.back();
+      // Retorna para a tela que estava aberta antes de abrir o perfil (a tela inicial de pesquisa)
+      router.replace('/');
     });
   };
 

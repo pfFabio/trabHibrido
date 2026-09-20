@@ -6,7 +6,16 @@ export default function RootLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: '#131314', flex: 1 },
+        animation: 'slide_from_right',
       }}
-    />
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen
+        name="perfil"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+    </Stack>
   );
 }

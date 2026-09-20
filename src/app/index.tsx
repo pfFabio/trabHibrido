@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 interface CategoryItem {
   id: string;
@@ -64,6 +65,7 @@ const IconPlaceholder: React.FC<{ uri: string; color: string; label: string }> =
 };
 
 export default function SearchScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'jogos' | 'apps' | 'pesquisa' | 'livros' | 'voce'>('pesquisa');
@@ -112,11 +114,15 @@ export default function SearchScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Foto de Perfil do Usuário com anel azul */}
-          <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.8}>
+          {/* Foto de Perfil do Usuário com anel azul (Abre a tela de perfil) */}
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            activeOpacity={0.8}
+            onPress={() => router.push('/perfil')}
+          >
             <Image
               source={{
-                uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&q=80',
+                uri: 'https://github.com/pfFabio.png',
               }}
               style={styles.avatarImage}
             />
@@ -249,10 +255,10 @@ export default function SearchScreen() {
             <Text style={styles.tabLabelInactive}>Livros</Text>
           </TouchableOpacity>
 
-          {/* Tab 5: Você */}
+          {/* Tab 5: Você (Navega para a tela de Perfil) */}
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => setActiveTab('voce')}
+            onPress={() => router.push('/perfil')}
             activeOpacity={0.7}
           >
             <Ionicons name="person-outline" size={22} color="#8E918F" />

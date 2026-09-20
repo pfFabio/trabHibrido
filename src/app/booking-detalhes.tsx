@@ -261,37 +261,27 @@ export default function BookingDetailsScreen() {
         {/* ============================================================== */}
         {/* NAVEGAÇÃO SUPERIOR                                             */}
         {/* ============================================================== */}
-        {isPC ? (
-          <View style={styles.pcTopNav}>
-            <TouchableOpacity
-              style={styles.pcBackBtn}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={20} color="#E3E3E3" />
-              <Text style={styles.pcBackBtnText}>Voltar</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.topHeader}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => router.back()}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={24} color="#E3E3E3" />
-            </TouchableOpacity>
+        {/* ============================================================== */}
+        {/* NAVEGAÇÃO SUPERIOR (Idêntica à página de livros)               */}
+        {/* ============================================================== */}
+        <View style={[styles.topHeader, isPC && styles.pcTopNav]}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color="#E3E3E3" />
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.headerIconBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="ellipsis-vertical" size={22} color="#E3E3E3" />
-            </TouchableOpacity>
-          </View>
-        )}
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color="#E3E3E3" />
+          </TouchableOpacity>
+        </View>
 
         {/* ============================================================== */}
         {/* CONTEÚDO ROLÁVEL                                               */}
@@ -727,9 +717,11 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     padding: 6,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   headerIconBtn: {
     padding: 6,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   scroll: {
     flex: 1,
@@ -1221,27 +1213,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#131314',
   },
   pcTopNav: {
+    maxWidth: 1280,
+    alignSelf: 'center',
+    width: '100%',
     paddingHorizontal: 36,
     paddingTop: 16,
     paddingBottom: 8,
-  },
-  pcBackBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    alignSelf: 'flex-start',
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: '#1E1F22',
-    borderWidth: 1,
-    borderColor: '#282A2C',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
-  },
-  pcBackBtnText: {
-    color: '#E3E3E3',
-    fontSize: 14,
-    fontWeight: '600',
   },
   pcScrollContent: {
     maxWidth: 1280,

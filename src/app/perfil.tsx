@@ -8,6 +8,9 @@ import {
   StatusBar,
   Image,
   Platform,
+  Animated,
+  Dimensions,
+  Easing,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -65,9 +68,50 @@ const MENU_ITEMS: MenuItem[] = [
   },
 ];
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // Animações de transição suave (deslize da direita para a esquerda)
+  const slideAnim = React.useRef(new Animated.Value(SCREEN_WIDTH)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0.2)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 420, // 420ms suave, perceptível e fluido
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 380,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_WIDTH,
+        duration: 320,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0.2,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      router.back();
+    });
+  };
 
   // Trava de rolagem no navegador web
   useEffect(() => {
@@ -95,18 +139,27 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#131314" />
 
-      {/* Botão Superior de Fechar (X) */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          style={styles.closeBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={26} color="#E3E3E3" />
-        </TouchableOpacity>
-      </View>
+      <Animated.View
+        style={[
+          styles.animatedContainer,
+          {
+            transform: [{ translateX: slideAnim }],
+            opacity: opacityAnim,
+          },
+        ]}
+      >
+        {/* Botão Superior de Fechar (X) */}
+        <View style={styles.topBar}>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={handleClose}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={26} color="#E3E3E3" />
+          </TouchableOpacity>
+        </View>
 
       <ScrollView
         style={styles.scroll}
@@ -182,7 +235,8 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </Animated.View>
+  </SafeAreaView>
   );
 }
 
@@ -198,6 +252,12 @@ const styles = StyleSheet.create({
         overflow: 'hidden' as any,
       }
       : {}),
+  },
+  animatedContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#131314',
   },
   topBar: {
     flexDirection: 'row',

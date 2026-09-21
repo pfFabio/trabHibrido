@@ -24,45 +24,51 @@ export default function GerenciarAppsScreen() {
   const fromRoute = params.from || '/';
   const insets = useSafeAreaInsets();
   const [selectedTab, setSelectedTab] = useState<'visao_geral' | 'gerenciar'>('visao_geral');
+  const isWeb = Platform.OS === 'web';
 
-  // Animação de entrada suave da direita para a esquerda
-  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
-  const opacityAnim = useRef(new Animated.Value(0.2)).current;
+  // Animação de entrada suave apenas no web (no celular é gerido nativamente pelo Stack)
+  const slideAnim = useRef(new Animated.Value(isWeb ? SCREEN_WIDTH : 0)).current;
+  const opacityAnim = useRef(new Animated.Value(isWeb ? 0 : 1)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 350,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+    if (isWeb) {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 250,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isWeb]);
 
   const handleBack = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_WIDTH,
-        duration: 320,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0.2,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Retorna dinamicamente para a tela que estava aberta antes de abrir o perfil (ex: '/' ou a futura tela '/livros')
+    if (isWeb) {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: SCREEN_WIDTH,
+          duration: 280,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        router.replace(fromRoute as any);
+      });
+    } else {
       router.replace(fromRoute as any);
-    });
+    }
   };
 
   // Trava de rolagem no navegador web
@@ -94,7 +100,7 @@ export default function GerenciarAppsScreen() {
       <Animated.View
         style={[
           styles.animatedContainer,
-          {
+          isWeb && {
             transform: [{ translateX: slideAnim }],
             opacity: opacityAnim,
           },

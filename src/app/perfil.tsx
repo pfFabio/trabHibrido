@@ -77,90 +77,111 @@ export default function ProfileScreen() {
   const fromRoute = params.from || '/';
   const insets = useSafeAreaInsets();
 
-  // Animações de transição suave (deslize da direita para a esquerda)
-  const slideAnim = React.useRef(new Animated.Value(SCREEN_WIDTH)).current;
-  const opacityAnim = React.useRef(new Animated.Value(0.2)).current;
+  const isWeb = Platform.OS === 'web';
+
+  // Animações de transição para navegador web (no celular o React Navigation cuida nativamente sem tela branca)
+  const slideAnim = React.useRef(new Animated.Value(isWeb ? SCREEN_WIDTH : 0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(isWeb ? 0 : 1)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 420, // 420ms suave, perceptível e fluido
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 380,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
+    if (isWeb) {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 400,
+          duration: 350,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 350,
+          duration: 250,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
       ]).start();
-    }, [])
+    }
+  }, [isWeb]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isWeb) {
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 350,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 250,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }, [isWeb])
   );
 
   const handleClose = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_WIDTH,
-        duration: 320,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0.2,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    if (isWeb) {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: SCREEN_WIDTH,
+          duration: 280,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace(fromRoute as any);
+        }
+      });
+    } else {
+      // No celular: fecha instantaneamente com a animação nativa do Stack (sem flash branco)
       if (router.canGoBack()) {
         router.back();
       } else {
         router.replace(fromRoute as any);
       }
-    });
+    }
   };
 
   const handleMenuItemPress = (item: MenuItem) => {
     if (item.id === '1') {
-      // Ao clicar em gerenciar apps e dispositivos, a tela de perfil desliza pra direita sumindo do app e a tela gerenciar aparece
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: SCREEN_WIDTH,
-          duration: 320,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0.2,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Passa a tela de origem adiante para que a tela de gerenciamento saiba exatamente para onde retornar
-        router.replace({
+      if (isWeb) {
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: SCREEN_WIDTH,
+            duration: 280,
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          router.replace({
+            pathname: '/gerenciar',
+            params: { from: fromRoute },
+          });
+        });
+      } else {
+        // No celular: navegação nativa direta
+        router.push({
           pathname: '/gerenciar',
           params: { from: fromRoute },
         });
-      });
+      }
     }
   };
 
@@ -193,7 +214,7 @@ export default function ProfileScreen() {
       <Animated.View
         style={[
           styles.animatedContainer,
-          {
+          isWeb && {
             transform: [{ translateX: slideAnim }],
             opacity: opacityAnim,
           },

@@ -529,11 +529,6 @@ const BookCard: React.FC<{
         <View style={[styles.spineEffect, { borderRightColor: isLightBg ? '#E4E4E7' : '#27272A' }]} />
         <View style={styles.bookSpineShadow} />
 
-        {/* Badge demonstrativa no topo da capa */}
-        <View style={[styles.demoTag, { backgroundColor: isLightBg ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.12)' }]}>
-          <Text style={[styles.demoTagText, { color: textColor }]}>DEMO</Text>
-        </View>
-
         {/* Conteúdo Central: Ícone Temático e Nome */}
         <View style={styles.bookArtFallback}>
           <View

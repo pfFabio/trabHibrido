@@ -127,10 +127,6 @@ export default function BookDetailsScreen() {
         <View style={styles.spineEffect} />
         <View style={styles.bookSpineShadow} />
 
-        <View style={styles.demoTag}>
-          <Text style={styles.demoTagText}>DEMO</Text>
-        </View>
-
         <View style={styles.coverArtBox}>
           <View
             style={[

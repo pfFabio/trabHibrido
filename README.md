@@ -114,6 +114,6 @@ trabHibrido/
 ## 👥 Integrantes do Grupo
 
 *Engenharia de Software — Universidade de Vassouras*
-- **Aluno 1:** [Nome Completo] — Matrícula: [00000000]
-- **Aluno 2:** [Nome Completo] — Matrícula: [00000000]
-- **Aluno 3:** [Nome Completo] — Matrícula: [00000000]
+- **Aluno 1:** Fábio Pinto Figueiredo — Matrícula: 202413741
+- **Aluno 2:** Daniel Augusto — Matrícula: 202322047
+

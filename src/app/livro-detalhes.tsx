@@ -16,6 +16,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getBookDetails } from '@/services/openLibrary';
+import { isInWishlist, toggleWishlist } from '@/services/wishlist';
 
 // Parâmetros recebidos quando a tela é aberta pela busca (todos chegam como texto)
 type BookParams = {
@@ -126,6 +127,27 @@ export default function BookDetailsScreen() {
       }
     : DEFAULT_BOOK;
   const relatedHeading = isApiBook ? 'Você também pode gostar' : `Mais de ${DEFAULT_BOOK.author}`;
+
+  // Id usado na lista de desejos (o livro de demonstração tem um id fixo)
+  const wishlistId = params.id ?? 'demo-voce-ja-sabe';
+
+  // Ao abrir a tela, verifica no armazenamento local se o livro já está salvo
+  useEffect(() => {
+    isInWishlist(wishlistId).then(setIsBookmarked);
+  }, [wishlistId]);
+
+  const handleToggleWishlist = async () => {
+    const saved = await toggleWishlist({
+      id: wishlistId,
+      title: book.title,
+      author: book.author,
+      coverUrl: params.coverUrl || undefined,
+      year: params.year || undefined,
+      pages: book.pages,
+      rating: book.rating,
+    });
+    setIsBookmarked(saved);
+  };
 
   // Busca a sinopse e os assuntos do livro na API
   useEffect(() => {
@@ -267,7 +289,7 @@ export default function BookDetailsScreen() {
           <View style={styles.headerRightActions}>
             <TouchableOpacity
               style={styles.headerIconBtn}
-              onPress={() => setIsBookmarked(!isBookmarked)}
+              onPress={handleToggleWishlist}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               activeOpacity={0.7}
             >
@@ -383,7 +405,7 @@ export default function BookDetailsScreen() {
                     {/* Adicionar à lista de desejos */}
                     <TouchableOpacity
                       style={styles.pcSecondaryIconBtn}
-                      onPress={() => setIsBookmarked(!isBookmarked)}
+                      onPress={handleToggleWishlist}
                       activeOpacity={0.7}
                     >
                       <Ionicons

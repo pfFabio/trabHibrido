@@ -8,6 +8,8 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  FlatList,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +17,50 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { searchBooks, BookSearchResult } from '@/services/openLibrary';
 
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
+
+// Item da lista de resultados: capa à esquerda e informações à direita
+const BookResultItem: React.FC<{ book: BookSearchResult; onPress?: () => void }> = ({
+  book,
+  onPress,
+}) => (
+  <TouchableOpacity style={styles.resultItem} activeOpacity={0.75} onPress={onPress}>
+    {book.coverUrl ? (
+      <Image source={{ uri: book.coverUrl }} style={styles.cover} resizeMode="cover" />
+    ) : (
+      <View style={[styles.cover, styles.coverFallback]}>
+        <Ionicons name="book-outline" size={26} color="#8E918F" />
+      </View>
+    )}
+
+    <View style={styles.resultInfo}>
+      <Text style={styles.resultTitle} numberOfLines={2}>
+        {book.title}
+      </Text>
+      <Text style={styles.resultAuthor} numberOfLines={1}>
+        {book.author}
+      </Text>
+
+      <View style={styles.metaRow}>
+        <Text style={styles.metaText}>E-book</Text>
+        {book.rating !== undefined && (
+          <>
+            <Text style={styles.metaDot}>•</Text>
+            <Text style={styles.metaText}>{book.rating.toFixed(1).replace('.', ',')}</Text>
+            <Ionicons name="star" size={11} color="#C4C7C5" />
+          </>
+        )}
+        {book.year !== undefined && (
+          <>
+            <Text style={styles.metaDot}>•</Text>
+            <Text style={styles.metaText}>{book.year}</Text>
+          </>
+        )}
+      </View>
+
+      {book.pages !== undefined && <Text style={styles.metaText}>{book.pages} páginas</Text>}
+    </View>
+  </TouchableOpacity>
+);
 
 export default function BookSearchScreen() {
   const router = useRouter();
@@ -124,11 +170,19 @@ export default function BookSearchScreen() {
 
     if (status === 'success') {
       return (
-        <View style={styles.resultsHeader}>
-          <Text style={styles.resultsCount}>
-            {results.length} resultados para "{query.trim()}"
-          </Text>
-        </View>
+        <FlatList
+          data={results}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <BookResultItem book={item} />}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <Text style={styles.resultsCount}>
+              {results.length} resultados para "{query.trim()}"
+            </Text>
+          }
+        />
       );
     }
 
@@ -264,12 +318,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  resultsHeader: {
+  listContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 24,
   },
   resultsCount: {
     color: '#C4C7C5',
     fontSize: 14,
+    marginBottom: 8,
+  },
+  resultItem: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    gap: 16,
+  },
+  cover: {
+    width: 72,
+    height: 108,
+    borderRadius: 6,
+    backgroundColor: '#1E1F22',
+    borderWidth: 1,
+    borderColor: '#2A2B2F',
+  },
+  coverFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
+  },
+  resultTitle: {
+    color: '#E3E3E3',
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  resultAuthor: {
+    color: '#C4C7C5',
+    fontSize: 13,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    color: '#8E918F',
+    fontSize: 12,
+  },
+  metaDot: {
+    color: '#8E918F',
+    fontSize: 10,
   },
 });

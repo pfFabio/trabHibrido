@@ -41,6 +41,13 @@ export default function RootLayout() {
         }}
       />
       <Stack.Screen
+        name="busca-livros"
+        options={{
+          animation: 'slide_from_right',
+          animationDuration: 420,
+        }}
+      />
+      <Stack.Screen
         name="booking-detalhes"
         options={{
           animation: 'slide_from_right',

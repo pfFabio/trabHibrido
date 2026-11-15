@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,9 +14,10 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { getBookDetails } from '@/services/openLibrary';
 import { isInWishlist, toggleWishlist } from '@/services/wishlist';
+import { BookReview, getReview } from '@/services/reviews';
 
 // Parâmetros recebidos quando a tela é aberta pela busca (todos chegam como texto)
 type BookParams = {
@@ -135,6 +136,87 @@ export default function BookDetailsScreen() {
   useEffect(() => {
     isInWishlist(wishlistId).then(setIsBookmarked);
   }, [wishlistId]);
+
+  // Avaliação do usuário: recarrega sempre que a tela ganha foco
+  // (ex.: ao voltar da tela "Avaliar livro" depois de postar ou excluir)
+  const [myReview, setMyReview] = useState<BookReview | undefined>();
+  useFocusEffect(
+    useCallback(() => {
+      getReview(wishlistId).then(setMyReview);
+    }, [wishlistId]),
+  );
+
+  const openReviewScreen = () => {
+    router.push({
+      pathname: '/avaliar-livro',
+      params: isApiBook
+        ? {
+            id: wishlistId,
+            title: book.title,
+            author: book.author,
+            coverUrl: params.coverUrl ?? '',
+          }
+        : {},
+    });
+  };
+
+  // Seção "Avaliar este livro" / "Sua avaliação" (usada no PC e no celular)
+  const renderReviewSection = () => (
+    <View style={[styles.reviewSection, isPC && styles.pcReviewSection]}>
+      <Text style={styles.sectionHeading}>
+        {myReview ? 'Sua avaliação' : 'Avaliar este livro'}
+      </Text>
+
+      {myReview ? (
+        <View style={styles.myReviewCard}>
+          <View style={styles.myReviewHeader}>
+            <View style={styles.reviewAvatar}>
+              <Ionicons name="person" size={18} color="#C2E7FF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.reviewAuthorName}>Você</Text>
+              <View style={styles.reviewStarsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Ionicons
+                    key={star}
+                    name={star <= myReview.rating ? 'star' : 'star-outline'}
+                    size={13}
+                    color={star <= myReview.rating ? '#A8C7FA' : '#8E918F'}
+                  />
+                ))}
+                <Text style={styles.reviewDate}>
+                  {new Date(myReview.updatedAt).toLocaleDateString('pt-BR')}
+                </Text>
+              </View>
+            </View>
+          </View>
+          {myReview.text.length > 0 && <Text style={styles.reviewText}>{myReview.text}</Text>}
+          <TouchableOpacity onPress={openReviewScreen} activeOpacity={0.7}>
+            <Text style={styles.reviewEditLink}>Editar sua avaliação</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.reviewHint}>Conte o que você achou</Text>
+          <View style={styles.emptyStarsRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <TouchableOpacity
+                key={star}
+                onPress={openReviewScreen}
+                activeOpacity={0.7}
+                accessibilityLabel={`Avaliar com ${star} ${star === 1 ? 'estrela' : 'estrelas'}`}
+              >
+                <Ionicons name="star-outline" size={34} color="#8E918F" />
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity onPress={openReviewScreen} activeOpacity={0.7}>
+            <Text style={styles.reviewEditLink}>Escrever uma avaliação</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
 
   const handleToggleWishlist = async () => {
     const saved = await toggleWishlist({
@@ -477,6 +559,9 @@ export default function BookDetailsScreen() {
                     </TouchableOpacity>
                   </View>
 
+                  {/* Avaliação do usuário (salva no AsyncStorage) */}
+                  {renderReviewSection()}
+
                   {/* Seção Saiba mais (Tags) */}
                   <View style={styles.pcTagsSection}>
                     <Text style={styles.pcSubHeading}>Saiba mais</Text>
@@ -676,6 +761,9 @@ export default function BookDetailsScreen() {
                 )}
               </View>
 
+              {/* Avaliação do usuário (salva no AsyncStorage) */}
+              {renderReviewSection()}
+
               {/* Seção Mais de Ragas Bantara no Mobile */}
               <View style={[styles.pcPackageSection, { marginTop: 20 }]}>
                 <View style={styles.sectionHeaderRow}>
@@ -786,6 +874,69 @@ export default function BookDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
+  reviewSection: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  pcReviewSection: {
+    paddingHorizontal: 0,
+    marginBottom: 28,
+  },
+  reviewHint: {
+    color: '#8E918F',
+    fontSize: 13,
+  },
+  emptyStarsRow: {
+    flexDirection: 'row',
+    gap: 18,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  myReviewCard: {
+    marginTop: 8,
+    gap: 10,
+  },
+  myReviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  reviewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#004A77',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewAuthorName: {
+    color: '#E3E3E3',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 2,
+  },
+  reviewDate: {
+    color: '#8E918F',
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  reviewText: {
+    color: '#C4C7C5',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  reviewEditLink: {
+    color: '#A8C7FA',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#131314',

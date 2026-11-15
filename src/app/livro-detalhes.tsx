@@ -384,6 +384,7 @@ export default function BookDetailsScreen() {
 
             <TouchableOpacity
               style={styles.headerIconBtn}
+              onPress={() => router.push('/busca-livros')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               activeOpacity={0.7}
             >

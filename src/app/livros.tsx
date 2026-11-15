@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -754,7 +753,6 @@ const BookCarouselSection: React.FC<BookCarouselSectionProps> = ({
 export default function BooksScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [searchText, setSearchText] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'ebooks' | 'audiolivros' | 'generos' | 'mais_vendidos'>('ebooks');
 
   // Trava de rolagem para modo web
@@ -786,19 +784,28 @@ export default function BooksScreen() {
       <View style={styles.container}>
         {/* Barra Superior de Pesquisa */}
         <View style={styles.headerRow}>
-          <View style={styles.searchBar}>
+          {/* Barra de pesquisa: abre a tela de busca (Open Library API) */}
+          <TouchableOpacity
+            style={styles.searchBar}
+            activeOpacity={0.8}
+            onPress={() => router.push('/busca-livros')}
+          >
             <Ionicons name="search" size={20} color="#C4C7C5" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Pesquisar livros"
-              placeholderTextColor="#8E918F"
-              value={searchText}
-              onChangeText={setSearchText}
-            />
-            <TouchableOpacity style={styles.micBtn} activeOpacity={0.7}>
+            <Text style={styles.searchPlaceholder}>Pesquisar livros</Text>
+            <View style={styles.micBtn}>
               <Ionicons name="mic" size={21} color="#C4C7C5" />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Atalho para a lista de desejos (livros salvos) */}
+          <TouchableOpacity
+            style={styles.wishlistBtn}
+            activeOpacity={0.7}
+            onPress={() => router.push('/biblioteca')}
+            accessibilityLabel="Lista de desejos"
+          >
+            <Ionicons name="bookmark-outline" size={22} color="#E3E3E3" />
+          </TouchableOpacity>
 
           {/* Foto de Perfil com Anel Azul do Google */}
           <TouchableOpacity
@@ -1011,14 +1018,20 @@ const styles = StyleSheet.create({
   searchIcon: {
     marginRight: 12,
   },
-  searchInput: {
+  searchPlaceholder: {
     flex: 1,
-    color: '#E3E3E3',
+    color: '#8E918F',
     fontSize: 15,
-    paddingVertical: 0,
   },
   micBtn: {
     padding: 4,
+  },
+  wishlistBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarContainer: {
     width: 38,

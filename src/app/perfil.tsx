@@ -155,6 +155,11 @@ export default function ProfileScreen() {
   };
 
   const handleMenuItemPress = (item: MenuItem) => {
+    // Biblioteca: abre a lista de desejos de livros salvos no AsyncStorage
+    if (item.id === '6') {
+      router.push('/biblioteca');
+      return;
+    }
     if (item.id === '1') {
       if (isWeb) {
         Animated.parallel([

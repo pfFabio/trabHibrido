@@ -131,6 +131,22 @@ export default function BookSearchScreen() {
     }
   };
 
+  // Abre a tela de detalhes levando os dados que já vieram da busca
+  const openBookDetails = (book: BookSearchResult) => {
+    router.push({
+      pathname: '/livro-detalhes',
+      params: {
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        coverUrl: book.coverUrl ?? '',
+        year: book.year?.toString() ?? '',
+        pages: book.pages?.toString() ?? '',
+        rating: book.rating?.toString() ?? '',
+      },
+    });
+  };
+
   const renderContent = () => {
     if (status === 'loading') {
       return (
@@ -173,7 +189,9 @@ export default function BookSearchScreen() {
         <FlatList
           data={results}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <BookResultItem book={item} />}
+          renderItem={({ item }) => (
+            <BookResultItem book={item} onPress={() => openBookDetails(item)} />
+          )}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

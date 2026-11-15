@@ -8,11 +8,40 @@ import {
   StatusBar,
   Platform,
   Alert,
+  Image,
+  ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { getBookDetails } from '@/services/openLibrary';
+
+// Parâmetros recebidos quando a tela é aberta pela busca (todos chegam como texto)
+type BookParams = {
+  id?: string;
+  title?: string;
+  author?: string;
+  coverUrl?: string;
+  year?: string;
+  pages?: string;
+  rating?: string;
+};
+
+// Livro de demonstração exibido quando a tela é aberta pela vitrine da Play Livros
+const DEFAULT_BOOK = {
+  title: 'Você Já Sabe: Por que o seu cérebro se recusa a fazer o que você sabe que é certo',
+  shortTitle: 'Você Já Sabe',
+  author: 'Ragas Bantara',
+  publisher: 'Sextante • mar. de 2024',
+  rating: '4,6',
+  pages: '144',
+  synopsis:
+    'Por que é tão difícil começar aquilo que sabemos que precisamos fazer? Neste best-seller provocador, Ragas Bantara explora os mecanismos biológicos e psicológicos que sabotam nosso autocontrole e revela ferramentas práticas para reprogramar o cérebro e vencer a autossabotagem de uma vez por todas.',
+  synopsisExtra:
+    'Com base nas pesquisas mais recentes da neurociência e da psicologia comportamental, o livro apresenta estratégias acessíveis e aplicáveis ao dia a dia para que você recupere o foco, vença a procrastinação e alcance seus objetivos mais ambiciosos.',
+  tags: ['Autoajuda', 'Psicologia'],
+};
 
 // Livros relacionados de Ragas Bantara para a barra lateral no PC e mobile
 const RELATED_BOOKS = [
@@ -76,6 +105,47 @@ export default function BookDetailsScreen() {
   const [purchaseModalVisible, setPurchaseModalVisible] = useState(false);
   const [isPurchased, setIsPurchased] = useState(false);
 
+  // Livro vindo da busca (Open Library) ou o livro de demonstração
+  const params = useLocalSearchParams<BookParams>();
+  const isApiBook = !!params.id;
+  const [apiSynopsis, setApiSynopsis] = useState<string | undefined>();
+  const [apiTags, setApiTags] = useState<string[]>([]);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(isApiBook);
+
+  const book = isApiBook
+    ? {
+        title: params.title ?? 'Livro sem título',
+        shortTitle: params.title ?? 'Livro',
+        author: params.author ?? 'Autor desconhecido',
+        publisher: params.year ? `Publicado em ${params.year}` : 'Open Library',
+        rating: params.rating ? params.rating.replace('.', ',') : '–',
+        pages: params.pages ?? '–',
+        synopsis: apiSynopsis ?? 'Sinopse não disponível para este livro.',
+        synopsisExtra: undefined as string | undefined,
+        tags: apiTags,
+      }
+    : DEFAULT_BOOK;
+  const relatedHeading = isApiBook ? 'Você também pode gostar' : `Mais de ${DEFAULT_BOOK.author}`;
+
+  // Busca a sinopse e os assuntos do livro na API
+  useEffect(() => {
+    if (!params.id) return;
+    const controller = new AbortController();
+    setIsLoadingDetails(true);
+    getBookDetails(params.id, controller.signal)
+      .then((details) => {
+        setApiSynopsis(details.description);
+        setApiTags(details.subjects.slice(0, 4));
+      })
+      .catch(() => {
+        // Mantém o texto padrão de "sinopse não disponível"
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingDetails(false);
+      });
+    return () => controller.abort();
+  }, [params.id]);
+
   // Trava de rolagem para modo web
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -100,7 +170,7 @@ export default function BookDetailsScreen() {
 
   const handleFreeSample = () => {
     if (Platform.OS === 'web') {
-      window.alert('Amostra gratuita de "Você Já Sabe" carregada com sucesso!');
+      window.alert(`Amostra gratuita de "${book.shortTitle}" carregada com sucesso!`);
     } else {
       Alert.alert('Amostra Gratuita', 'Amostra carregada na sua biblioteca!');
     }
@@ -120,6 +190,25 @@ export default function BookDetailsScreen() {
   const renderVoceJaSabeCover = (isLarge: boolean = false) => {
     const width = isLarge ? 215 : 126;
     const height = isLarge ? 320 : 190;
+
+    // Livro da busca: usa a capa real vinda da Open Library
+    if (isApiBook) {
+      return (
+        <View style={[styles.coverWrapper, { width, height }]}>
+          {params.coverUrl ? (
+            <Image
+              source={{ uri: params.coverUrl.replace('-M.jpg', '-L.jpg') }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.coverArtBox}>
+              <Ionicons name="book-outline" size={isLarge ? 48 : 32} color="#8E918F" />
+            </View>
+          )}
+        </View>
+      );
+    }
 
     return (
       <View style={[styles.coverWrapper, { width, height }]}>
@@ -224,23 +313,21 @@ export default function BookDetailsScreen() {
               <View style={styles.pcHeaderContainer}>
                 {/* Coluna Esquerda do Topo */}
                 <View style={styles.pcHeaderLeftCol}>
-                  <Text style={styles.pcBookTitle}>
-                    Você Já Sabe: Por que o seu cérebro se recusa a fazer o que você sabe que é certo
-                  </Text>
+                  <Text style={styles.pcBookTitle}>{book.title}</Text>
 
                   <TouchableOpacity activeOpacity={0.7}>
-                    <Text style={styles.pcAuthorText}>Ragas Bantara</Text>
+                    <Text style={styles.pcAuthorText}>{book.author}</Text>
                   </TouchableOpacity>
-                  <Text style={styles.pcPubText}>Sextante • mar. de 2024</Text>
+                  <Text style={styles.pcPubText}>{book.publisher}</Text>
 
                   {/* Faixa de Estatísticas PC */}
                   <View style={styles.pcMetricsRow}>
                     <View style={styles.pcMetricItem}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={styles.pcMetricValue}>4,6</Text>
+                        <Text style={styles.pcMetricValue}>{book.rating}</Text>
                         <Ionicons name="star" size={13} color="#E3E3E3" style={{ marginLeft: 3 }} />
                       </View>
-                      <Text style={styles.pcMetricSub}>63 avaliações</Text>
+                      <Text style={styles.pcMetricSub}>{isApiBook ? 'Open Library' : '63 avaliações'}</Text>
                     </View>
 
                     <View style={styles.pcMetricDivider} />
@@ -253,7 +340,7 @@ export default function BookDetailsScreen() {
                     <View style={styles.pcMetricDivider} />
 
                     <View style={styles.pcMetricItem}>
-                      <Text style={styles.pcMetricValue}>144</Text>
+                      <Text style={styles.pcMetricValue}>{book.pages}</Text>
                       <Text style={styles.pcMetricSub}>Páginas</Text>
                     </View>
 
@@ -354,10 +441,14 @@ export default function BookDetailsScreen() {
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.pcSynopsisText}>
-                      Por que é tão difícil começar aquilo que sabemos que precisamos fazer? Neste best-seller provocador, Ragas Bantara explora os mecanismos biológicos e psicológicos que sabotam nosso autocontrole e revela ferramentas práticas para reprogramar o cérebro e vencer a autossabotagem de uma vez por todas.{'\n\n'}
-                      Com base nas pesquisas mais recentes da neurociência e da psicologia comportamental, o livro apresenta estratégias acessíveis e aplicáveis ao dia a dia para que você recupere o foco, vença a procrastinação e alcance seus objetivos mais ambiciosos.
-                    </Text>
+                    {isLoadingDetails ? (
+                      <ActivityIndicator color="#A8C7FA" style={{ alignSelf: 'flex-start', marginVertical: 12 }} />
+                    ) : (
+                      <Text style={styles.pcSynopsisText}>
+                        {book.synopsis}
+                        {book.synopsisExtra ? `\n\n${book.synopsisExtra}` : ''}
+                      </Text>
+                    )}
 
                     <TouchableOpacity activeOpacity={0.7}>
                       <Text style={styles.pcLearnMoreLink}>Saiba mais sobre o livro</Text>
@@ -368,16 +459,16 @@ export default function BookDetailsScreen() {
                   <View style={styles.pcTagsSection}>
                     <Text style={styles.pcSubHeading}>Saiba mais</Text>
                     <View style={styles.tagsRow}>
-                      <View style={styles.tagChip}>
-                        <Text style={styles.tagChipText}>Autoajuda</Text>
-                      </View>
-                      <View style={styles.tagChip}>
-                        <Text style={styles.tagChipText}>Psicologia</Text>
-                      </View>
+                      {book.tags.map((tag) => (
+                        <View key={tag} style={styles.tagChip}>
+                          <Text style={styles.tagChipText}>{tag}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
 
-                  {/* Seção Pacote: Você Já Sabe */}
+                  {/* Seção Pacote: Você Já Sabe (só no livro de demonstração) */}
+                  {!isApiBook && (
                   <View style={styles.pcPackageSection}>
                     <Text style={styles.pcSubHeading}>Pacote: Você Já Sabe</Text>
                     <View style={styles.pcPackageCard}>
@@ -403,12 +494,13 @@ export default function BookDetailsScreen() {
                       </TouchableOpacity>
                     </View>
                   </View>
+                  )}
                 </View>
 
                 {/* Coluna Direita: Mais de Ragas Bantara */}
                 <View style={styles.pcGridRight}>
                   <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionHeading}>Mais de Ragas Bantara</Text>
+                    <Text style={styles.sectionHeading}>{relatedHeading}</Text>
                     <TouchableOpacity style={styles.arrowCircleBtn} activeOpacity={0.7}>
                       <Ionicons name="arrow-forward" size={18} color="#E3E3E3" />
                     </TouchableOpacity>
@@ -460,13 +552,11 @@ export default function BookDetailsScreen() {
                 {renderVoceJaSabeCover(false)}
 
                 <View style={styles.bookInfoCol}>
-                  <Text style={styles.mainTitle}>
-                    Você Já Sabe: Por que o seu cérebro se recusa a fazer o que você sabe que é certo
-                  </Text>
+                  <Text style={styles.mainTitle}>{book.title}</Text>
                   <TouchableOpacity activeOpacity={0.7}>
-                    <Text style={styles.authorText}>Ragas Bantara</Text>
+                    <Text style={styles.authorText}>{book.author}</Text>
                   </TouchableOpacity>
-                  <Text style={styles.publisherText}>Sextante</Text>
+                  <Text style={styles.publisherText}>{book.publisher}</Text>
                 </View>
               </View>
 
@@ -474,11 +564,11 @@ export default function BookDetailsScreen() {
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
                   <View style={styles.statTopRow}>
-                    <Text style={styles.statValue}>4,6</Text>
+                    <Text style={styles.statValue}>{book.rating}</Text>
                     <Ionicons name="star" size={13} color="#E3E3E3" style={{ marginLeft: 3 }} />
                   </View>
                   <View style={styles.statBottomRow}>
-                    <Text style={styles.statSubText}>63 avaliações</Text>
+                    <Text style={styles.statSubText}>{isApiBook ? 'Open Library' : '63 avaliações'}</Text>
                   </View>
                 </View>
 
@@ -492,7 +582,7 @@ export default function BookDetailsScreen() {
                 <View style={styles.statDivider} />
 
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>144</Text>
+                  <Text style={styles.statValue}>{book.pages}</Text>
                   <Text style={styles.statSubText}>Páginas</Text>
                 </View>
 
@@ -555,15 +645,19 @@ export default function BookDetailsScreen() {
               {/* Sinopse */}
               <View style={styles.synopsisCard}>
                 <Text style={styles.synopsisHeading}>Sobre este e-book</Text>
-                <Text style={styles.synopsisText} numberOfLines={4}>
-                  Por que é tão difícil começar aquilo que sabemos que precisamos fazer? Neste best-seller provocador, Ragas Bantara explora os mecanismos biológicos e psicológicos que sabotam nosso autocontrole e revela ferramentas práticas para reprogramar o cérebro e vencer a autossabotagem de uma vez por todas.
-                </Text>
+                {isLoadingDetails ? (
+                  <ActivityIndicator color="#A8C7FA" style={{ alignSelf: 'flex-start', marginVertical: 12 }} />
+                ) : (
+                  <Text style={styles.synopsisText} numberOfLines={4}>
+                    {book.synopsis}
+                  </Text>
+                )}
               </View>
 
               {/* Seção Mais de Ragas Bantara no Mobile */}
               <View style={[styles.pcPackageSection, { marginTop: 20 }]}>
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionHeading}>Mais de Ragas Bantara</Text>
+                  <Text style={styles.sectionHeading}>{relatedHeading}</Text>
                   <TouchableOpacity style={styles.arrowCircleBtn} activeOpacity={0.7}>
                     <Ionicons name="arrow-forward" size={18} color="#E3E3E3" />
                   </TouchableOpacity>
@@ -599,7 +693,7 @@ export default function BookDetailsScreen() {
                   <Ionicons name="close" size={24} color="#E3E3E3" />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.modalBookTitle}>Você Já Sabe (E-book)</Text>
+              <Text style={styles.modalBookTitle} numberOfLines={2}>{book.shortTitle} (E-book)</Text>
               <Text style={styles.modalPrice}>R$ 2,78</Text>
               <Text style={styles.modalPaymentMethod}>💳 Saldo do Google Play: R$ 50,00</Text>
               <TouchableOpacity

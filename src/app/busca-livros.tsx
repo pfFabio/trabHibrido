@@ -10,11 +10,28 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { searchBooks, BookSearchResult } from '@/services/openLibrary';
+import {
+  addSearchTerm,
+  clearSearchHistory,
+  getSearchHistory,
+  removeSearchTerm,
+} from '@/services/searchHistory';
+import { colors, radius, spacing } from '@/theme';
+
+const QUICK_SUGGESTIONS = [
+  'Ficção científica',
+  'Fantasia',
+  'Programação',
+  'Romance',
+  'Psicologia',
+  'História',
+];
 
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -71,6 +88,12 @@ export default function BookSearchScreen() {
   const [status, setStatus] = useState<SearchStatus>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [retryCount, setRetryCount] = useState(0);
+  const [history, setHistory] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    getSearchHistory().then(setHistory);
+  }, []);
 
   // Trava de rolagem para modo web (mesmo padrão das outras telas)
   useEffect(() => {
@@ -109,6 +132,12 @@ export default function BookSearchScreen() {
         const data = await searchBooks(termo, controller.signal);
         setResults(data);
         setStatus('success');
+        if (data.length > 0) {
+          const updated = await addSearchTerm(termo);
+          if (!controller.signal.aborted) {
+            setHistory(updated);
+          }
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
         setErrorMessage(error instanceof Error ? error.message : 'Erro desconhecido');
@@ -145,6 +174,32 @@ export default function BookSearchScreen() {
         rating: book.rating?.toString() ?? '',
       },
     });
+  };
+
+  const handleRefresh = async () => {
+    const termo = query.trim();
+    if (termo.length < 2 || refreshing) return;
+    setRefreshing(true);
+    try {
+      const data = await searchBooks(termo);
+      setResults(data);
+      setStatus('success');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Erro desconhecido');
+      setStatus('error');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRemoveHistoryItem = async (term: string) => {
+    const updated = await removeSearchTerm(term);
+    setHistory(updated);
+  };
+
+  const handleClearHistory = async () => {
+    await clearSearchHistory();
+    setHistory([]);
   };
 
   const renderContent = () => {
@@ -192,6 +247,8 @@ export default function BookSearchScreen() {
           renderItem={({ item }) => (
             <BookResultItem book={item} onPress={() => openBookDetails(item)} />
           )}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -205,11 +262,69 @@ export default function BookSearchScreen() {
     }
 
     return (
-      <View style={styles.centerBox}>
-        <Ionicons name="book-outline" size={56} color="#8E918F" />
-        <Text style={styles.centerTitle}>Pesquise na Play Livros</Text>
-        <Text style={styles.centerText}>Digite o título, autor ou assunto do livro.</Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.idleScrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionHeading}>Explorar temas</Text>
+        <View style={styles.chipsWrap}>
+          {QUICK_SUGGESTIONS.map((topic) => (
+            <TouchableOpacity
+              key={topic}
+              style={styles.suggestionChip}
+              activeOpacity={0.75}
+              onPress={() => setQuery(topic)}
+            >
+              <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
+              <Text style={styles.suggestionChipText}>{topic}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {history.length > 0 ? (
+          <View style={styles.historySection}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.sectionHeading}>Pesquisas recentes</Text>
+              <TouchableOpacity onPress={handleClearHistory} activeOpacity={0.7}>
+                <Text style={styles.clearBtnText}>Limpar</Text>
+              </TouchableOpacity>
+            </View>
+
+            {history.map((term) => (
+              <View key={term} style={styles.historyRow}>
+                <TouchableOpacity
+                  style={styles.historyItemBtn}
+                  activeOpacity={0.75}
+                  onPress={() => setQuery(term)}
+                >
+                  <Ionicons name="time-outline" size={18} color={colors.textMuted} />
+                  <Text style={styles.historyItemText} numberOfLines={1}>
+                    {term}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleRemoveHistoryItem(term)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`Remover ${term} do histórico`}
+                >
+                  <Ionicons name="close" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyIdleBox}>
+            <Ionicons name="book-outline" size={52} color={colors.textMuted} />
+            <Text style={styles.centerTitle}>Pesquise na Play Livros</Text>
+            <Text style={styles.centerText}>
+              Digite o título, autor ou toque em um tema acima.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
     );
   };
 
@@ -390,5 +505,75 @@ const styles = StyleSheet.create({
   metaDot: {
     color: '#8E918F',
     fontSize: 10,
+  },
+  idleScrollContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  sectionHeading: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.surfaceVariant,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  suggestionChipText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  historySection: {
+    marginTop: spacing.xs,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  clearBtnText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: spacing.sm,
+  },
+  historyItemBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  historyItemText: {
+    color: colors.text,
+    fontSize: 15,
+    flex: 1,
+  },
+  emptyIdleBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.xl,
+    gap: 10,
   },
 });

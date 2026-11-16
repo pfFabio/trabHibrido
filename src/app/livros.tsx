@@ -9,6 +9,7 @@ import {
   Image,
   Platform,
   Dimensions,
+  ActivityIndicator,
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -16,6 +17,17 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { searchBooksBySubject, type BookSearchResult } from '@/services/openLibrary';
+import { colors, radius, spacing } from '@/theme';
+
+const BOOK_GENRES = [
+  { label: 'Ficção', subject: 'fiction' },
+  { label: 'Fantasia', subject: 'fantasy' },
+  { label: 'Ficção Científica', subject: 'science_fiction' },
+  { label: 'Psicologia', subject: 'psychology' },
+  { label: 'História', subject: 'history' },
+  { label: 'Romance', subject: 'romance' },
+];
 
 interface BookItem {
   id: string;
@@ -580,6 +592,7 @@ const BookCard: React.FC<{
 };
 
 interface BookCarouselSectionProps {
+  sectionKey: string;
   title: string;
   books: BookItem[];
   marginTop?: number;
@@ -588,6 +601,7 @@ interface BookCarouselSectionProps {
 
 // Seção de Carrossel com Setinhas Flutuantes Estilo Play Store
 const BookCarouselSection: React.FC<BookCarouselSectionProps> = ({
+  sectionKey,
   title,
   books,
   marginTop = 0,
@@ -717,7 +731,22 @@ const BookCarouselSection: React.FC<BookCarouselSectionProps> = ({
               book={book}
               cardWidth={cardWidth}
               cardHeight={cardHeight}
-              onPress={() => router.push('/livro-detalhes')}
+              onPress={() =>
+                router.push({
+                  pathname: '/livro-detalhes',
+                  params: {
+                    id: `showcase-${sectionKey}-${book.id}-${book.title.slice(0, 10)}`,
+                    title: book.title,
+                    author: book.subtitle ?? 'Autor em destaque',
+                    price: book.price,
+                    originalPrice: book.originalPrice ?? '',
+                    coverBg: book.bgColor,
+                    coverAccent: book.accentColor,
+                    coverLabel: book.coverLabel ?? book.title,
+                    source: 'showcase',
+                  },
+                })
+              }
             />
           ))}
         </ScrollView>
@@ -754,6 +783,44 @@ export default function BooksScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeSubTab, setActiveSubTab] = useState<'ebooks' | 'audiolivros' | 'generos' | 'mais_vendidos'>('ebooks');
+  const [selectedGenre, setSelectedGenre] = useState<string>(BOOK_GENRES[0].subject);
+  const [genreBooks, setGenreBooks] = useState<BookSearchResult[]>([]);
+  const [genreStatus, setGenreStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [genreError, setGenreError] = useState('');
+  const [genreRetry, setGenreRetry] = useState(0);
+
+  useEffect(() => {
+    if (activeSubTab !== 'generos') return;
+    const controller = new AbortController();
+    setGenreStatus('loading');
+    searchBooksBySubject(selectedGenre, controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setGenreBooks(data);
+        setGenreStatus('success');
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setGenreError(error instanceof Error ? error.message : 'Erro ao carregar gênero');
+        setGenreStatus('error');
+      });
+    return () => controller.abort();
+  }, [activeSubTab, selectedGenre, genreRetry]);
+
+  const openApiBook = (book: BookSearchResult) => {
+    router.push({
+      pathname: '/livro-detalhes',
+      params: {
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        coverUrl: book.coverUrl ?? '',
+        year: book.year?.toString() ?? '',
+        pages: book.pages?.toString() ?? '',
+        rating: book.rating?.toString() ?? '',
+      },
+    });
+  };
 
   // Trava de rolagem para modo web
   useEffect(() => {
@@ -901,26 +968,174 @@ export default function BooksScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Seção 1: E-books por menos de R$ 5 */}
-          <BookCarouselSection
-            title="E-books por menos de R$ 5"
-            books={EBOOKS_SUB_5}
-          />
+          {activeSubTab === 'ebooks' && (
+            <>
+              {/* Seção 1: E-books por menos de R$ 5 */}
+              <BookCarouselSection
+                sectionKey="sub5"
+                title="E-books por menos de R$ 5"
+                books={EBOOKS_SUB_5}
+              />
 
-          {/* Seção 2: Os mais vendidos */}
-          <BookCarouselSection
-            title="Os mais vendidos"
-            books={BEST_SELLERS}
-            marginTop={22}
-          />
+              {/* Seção 2: Os mais vendidos */}
+              <BookCarouselSection
+                sectionKey="best"
+                title="Os mais vendidos"
+                books={BEST_SELLERS}
+                marginTop={22}
+              />
 
-          {/* Seção 3: Livros levados para a tela */}
-          <BookCarouselSection
-            title="Livros levados para a tela"
-            books={SCREEN_ADAPTATIONS}
-            marginTop={22}
-            paddingBottom={28}
-          />
+              {/* Seção 3: Livros levados para a tela */}
+              <BookCarouselSection
+                sectionKey="screen"
+                title="Livros levados para a tela"
+                books={SCREEN_ADAPTATIONS}
+                marginTop={22}
+                paddingBottom={28}
+              />
+            </>
+          )}
+
+          {activeSubTab === 'mais_vendidos' && (
+            <>
+              <BookCarouselSection
+                sectionKey="best-top"
+                title="Top mais vendidos da semana"
+                books={BEST_SELLERS}
+              />
+              <BookCarouselSection
+                sectionKey="best-adapt"
+                title="Sucessos adaptados para o cinema"
+                books={SCREEN_ADAPTATIONS}
+                marginTop={22}
+                paddingBottom={28}
+              />
+            </>
+          )}
+
+          {activeSubTab === 'audiolivros' && (
+            <>
+              <BookCarouselSection
+                sectionKey="audio-main"
+                title="Audiolivros em alta (narração completa)"
+                books={SCREEN_ADAPTATIONS}
+              />
+              <BookCarouselSection
+                sectionKey="audio-deals"
+                title="Ouvidos em até 4 horas"
+                books={EBOOKS_SUB_5}
+                marginTop={22}
+                paddingBottom={28}
+              />
+            </>
+          )}
+
+          {activeSubTab === 'generos' && (
+            <View style={styles.genresSection}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 16 }]}>
+                Explorar por gênero (Open Library API)
+              </Text>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.genreChipsRow}
+              >
+                {BOOK_GENRES.map((genre) => {
+                  const selected = selectedGenre === genre.subject;
+                  return (
+                    <TouchableOpacity
+                      key={genre.subject}
+                      style={[styles.genreChip, selected && styles.genreChipActive]}
+                      onPress={() => setSelectedGenre(genre.subject)}
+                      activeOpacity={0.75}
+                    >
+                      <Text
+                        style={[
+                          styles.genreChipText,
+                          selected && styles.genreChipTextActive,
+                        ]}
+                      >
+                        {genre.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {genreStatus === 'loading' && (
+                <View style={styles.genreStateBox}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={styles.genreStateText}>Carregando livros do gênero...</Text>
+                </View>
+              )}
+
+              {genreStatus === 'error' && (
+                <View style={styles.genreStateBox}>
+                  <Ionicons name="cloud-offline-outline" size={44} color={colors.textMuted} />
+                  <Text style={styles.genreStateTitle}>Não foi possível carregar</Text>
+                  <Text style={styles.genreStateText}>{genreError}</Text>
+                  <TouchableOpacity
+                    style={styles.genreRetryBtn}
+                    onPress={() => setGenreRetry((c) => c + 1)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.genreRetryText}>Tentar novamente</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {genreStatus === 'success' && genreBooks.length === 0 && (
+                <View style={styles.genreStateBox}>
+                  <Ionicons name="book-outline" size={44} color={colors.textMuted} />
+                  <Text style={styles.genreStateTitle}>Nenhum livro neste gênero</Text>
+                  <Text style={styles.genreStateText}>
+                    Selecione outra categoria acima para explorar.
+                  </Text>
+                </View>
+              )}
+
+              {genreStatus === 'success' && genreBooks.length > 0 && (
+                <View style={styles.genreList}>
+                  {genreBooks.map((item) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.genreBookRow}
+                      activeOpacity={0.75}
+                      onPress={() => openApiBook(item)}
+                    >
+                      {item.coverUrl ? (
+                        <Image
+                          source={{ uri: item.coverUrl }}
+                          style={styles.genreBookCover}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.genreBookCover, styles.genreBookCoverFallback]}>
+                          <Ionicons name="book-outline" size={24} color={colors.textMuted} />
+                        </View>
+                      )}
+                      <View style={styles.genreBookInfo}>
+                        <Text style={styles.genreBookTitle} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                        <Text style={styles.genreBookAuthor} numberOfLines={1}>
+                          {item.author}
+                        </Text>
+                        <Text style={styles.genreBookMeta}>
+                          E-book{item.year ? ` • ${item.year}` : ''}
+                          {item.rating !== undefined
+                            ? ` • ${item.rating.toFixed(1).replace('.', ',')} ★`
+                            : ''}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
         </ScrollView>
 
         {/* Bottom Navigation Bar (Material 3 Style - Fixo no Rodapé) */}
@@ -1272,5 +1487,105 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#8E918F',
+  },
+  genresSection: {
+    paddingBottom: spacing.xl,
+  },
+  genreChipsRow: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  genreChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.surfaceVariant,
+  },
+  genreChipActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primaryContainer,
+  },
+  genreChipText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  genreChipTextActive: {
+    color: colors.onPrimaryContainer,
+    fontWeight: '600',
+  },
+  genreStateBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    gap: 10,
+  },
+  genreStateTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  genreStateText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  genreRetryBtn: {
+    marginTop: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+  },
+  genreRetryText: {
+    color: '#062E6F',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  genreList: {
+    paddingHorizontal: spacing.md,
+    gap: 12,
+  },
+  genreBookRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceVariant,
+    padding: 10,
+    gap: 12,
+  },
+  genreBookCover: {
+    width: 56,
+    height: 84,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceVariant,
+  },
+  genreBookCoverFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genreBookInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  genreBookTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  genreBookAuthor: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  genreBookMeta: {
+    color: colors.textMuted,
+    fontSize: 11,
   },
 });

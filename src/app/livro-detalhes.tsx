@@ -19,7 +19,7 @@ import { getBookDetails } from '@/services/openLibrary';
 import { isInWishlist, toggleWishlist } from '@/services/wishlist';
 import { BookReview, getReview } from '@/services/reviews';
 
-// Parâmetros recebidos quando a tela é aberta pela busca (todos chegam como texto)
+// Parâmetros recebidos quando a tela é aberta pela busca ou pela vitrine da Play Livros
 type BookParams = {
   id?: string;
   title?: string;
@@ -28,6 +28,12 @@ type BookParams = {
   year?: string;
   pages?: string;
   rating?: string;
+  price?: string;
+  originalPrice?: string;
+  coverBg?: string;
+  coverAccent?: string;
+  coverLabel?: string;
+  source?: string;
 };
 
 // Livro de demonstração exibido quando a tela é aberta pela vitrine da Play Livros
@@ -107,12 +113,17 @@ export default function BookDetailsScreen() {
   const [purchaseModalVisible, setPurchaseModalVisible] = useState(false);
   const [isPurchased, setIsPurchased] = useState(false);
 
-  // Livro vindo da busca (Open Library) ou o livro de demonstração
+  // Livro vindo da busca (Open Library), da vitrine (Play Livros) ou demonstracao padrao
   const params = useLocalSearchParams<BookParams>();
-  const isApiBook = !!params.id;
+  const isShowcaseBook =
+    params.source === 'showcase' || (params.id?.startsWith('showcase-') ?? false);
+  const isApiBook = !!params.id && !isShowcaseBook;
   const [apiSynopsis, setApiSynopsis] = useState<string | undefined>();
   const [apiTags, setApiTags] = useState<string[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(isApiBook);
+
+  const bookPrice = params.price || 'R$ 2,78';
+  const bookOldPrice = params.originalPrice || 'R$ 4,99';
 
   const book = isApiBook
     ? {
@@ -126,8 +137,21 @@ export default function BookDetailsScreen() {
         synopsisExtra: undefined as string | undefined,
         tags: apiTags,
       }
-    : DEFAULT_BOOK;
-  const relatedHeading = isApiBook ? 'Você também pode gostar' : `Mais de ${DEFAULT_BOOK.author}`;
+    : isShowcaseBook
+      ? {
+          title: params.title ?? DEFAULT_BOOK.title,
+          shortTitle: params.title ?? DEFAULT_BOOK.shortTitle,
+          author: params.author || 'Play Livros • Seleção',
+          publisher: 'Google Play Livros • Edição digital',
+          rating: params.rating || '4,7',
+          pages: params.pages || '192',
+          synopsis: `Edição digital de "${params.title ?? 'Livro'}" selecionada na vitrine do Play Livros. Leia uma amostra gratuita ou salve na sua lista de desejos.`,
+          synopsisExtra: undefined as string | undefined,
+          tags: ['Play Livros', 'E-book'],
+        }
+      : DEFAULT_BOOK;
+  const relatedHeading =
+    isApiBook || isShowcaseBook ? 'Você também pode gostar' : `Mais de ${DEFAULT_BOOK.author}`;
 
   // Id usado na lista de desejos (o livro de demonstração tem um id fixo)
   const wishlistId = params.id ?? 'demo-voce-ja-sabe';
@@ -149,7 +173,7 @@ export default function BookDetailsScreen() {
   const openReviewScreen = () => {
     router.push({
       pathname: '/avaliar-livro',
-      params: isApiBook
+      params: params.id
         ? {
             id: wishlistId,
             title: book.title,
@@ -231,9 +255,12 @@ export default function BookDetailsScreen() {
     setIsBookmarked(saved);
   };
 
-  // Busca a sinopse e os assuntos do livro na API
+  // Busca a sinopse e os assuntos do livro na API apenas quando for livro da Open Library
   useEffect(() => {
-    if (!params.id) return;
+    if (!isApiBook || !params.id) {
+      setIsLoadingDetails(false);
+      return;
+    }
     const controller = new AbortController();
     setIsLoadingDetails(true);
     getBookDetails(params.id, controller.signal)
@@ -288,13 +315,13 @@ export default function BookDetailsScreen() {
     setIsPurchased(true);
     setPurchaseModalVisible(false);
     if (Platform.OS === 'web') {
-      window.alert('Compra de R$ 2,78 realizada com sucesso! O livro foi adicionado à sua biblioteca.');
+      window.alert(`Compra de ${bookPrice} realizada com sucesso! O livro foi adicionado à sua biblioteca.`);
     } else {
       Alert.alert('Sucesso!', 'Compra realizada! Livro disponível na sua biblioteca.');
     }
   };
 
-  // Renderizador da capa estilizada "Você Já Sabe"
+  // Renderizador da capa estilizada (vitrine Play Livros ou busca Open Library)
   const renderVoceJaSabeCover = (isLarge: boolean = false) => {
     const width = isLarge ? 215 : 126;
     const height = isLarge ? 320 : 190;
@@ -318,30 +345,41 @@ export default function BookDetailsScreen() {
       );
     }
 
+    const coverBg = params.coverBg || '#141416';
+    const coverAccent = params.coverAccent || '#FF6B00';
+    const coverLabel = params.coverLabel || 'VOCÊ JÁ\nSABE';
+
     return (
-      <View style={[styles.coverWrapper, { width, height }]}>
+      <View style={[styles.coverWrapper, { width, height, backgroundColor: coverBg }]}>
         {/* Lombada e efeito 3D */}
         <View style={styles.spineEffect} />
         <View style={styles.bookSpineShadow} />
 
-        <View style={styles.coverArtBox}>
+        <View style={[styles.coverArtBox, { backgroundColor: coverBg }]}>
           <View
             style={[
               styles.iconCircle,
+              { borderColor: coverAccent + '55', backgroundColor: coverAccent + '1A' },
               isLarge && { width: 70, height: 70, borderRadius: 35, marginBottom: 16 },
             ]}
           >
-            <Ionicons name="bulb-outline" size={isLarge ? 36 : 28} color="#FF6B00" />
+            <Ionicons
+              name={isShowcaseBook ? 'book-outline' : 'bulb-outline'}
+              size={isLarge ? 36 : 28}
+              color={coverAccent}
+            />
           </View>
           <Text
             style={[
               styles.coverTitleText,
+              { color: coverAccent },
               isLarge && { fontSize: 18, lineHeight: 24 },
             ]}
+            numberOfLines={3}
           >
-            VOCÊ JÁ{'\n'}SABE
+            {coverLabel}
           </Text>
-          {isLarge && (
+          {isLarge && !isShowcaseBook && (
             <Text style={styles.coverLargeSubtitle}>
               Por que o seu cérebro se recusa a fazer o que você sabe que é certo
             </Text>
@@ -473,10 +511,10 @@ export default function BookDetailsScreen() {
                       activeOpacity={0.85}
                     >
                       {!isPurchased && (
-                        <Text style={styles.pcBuyOldPrice}>R$ 4,99</Text>
+                        <Text style={styles.pcBuyOldPrice}>{bookOldPrice}</Text>
                       )}
                       <Text style={styles.pcBuyBtnText}>
-                        {isPurchased ? 'Ler agora' : 'E-book por R$ 2,78'}
+                        {isPurchased ? 'Ler agora' : `E-book por ${bookPrice}`}
                       </Text>
                     </TouchableOpacity>
 
@@ -723,11 +761,11 @@ export default function BookDetailsScreen() {
                     activeOpacity={0.85}
                   >
                     <Text style={styles.buyBtnText}>
-                      {isPurchased ? 'Ler agora' : 'E-book R$ 2,78'}
+                      {isPurchased ? 'Ler agora' : `E-book ${bookPrice}`}
                     </Text>
                   </TouchableOpacity>
                   {!isPurchased && (
-                    <Text style={styles.oldPriceNote}>Custava R$ 4,99</Text>
+                    <Text style={styles.oldPriceNote}>Custava {bookOldPrice}</Text>
                   )}
                 </View>
               </View>
@@ -809,7 +847,7 @@ export default function BookDetailsScreen() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.modalBookTitle} numberOfLines={2}>{book.shortTitle} (E-book)</Text>
-              <Text style={styles.modalPrice}>R$ 2,78</Text>
+              <Text style={styles.modalPrice}>{bookPrice}</Text>
               <Text style={styles.modalPaymentMethod}>💳 Saldo do Google Play: R$ 50,00</Text>
               <TouchableOpacity
                 style={styles.modalConfirmBtn}

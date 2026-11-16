@@ -22,6 +22,11 @@ async function getAllReviews(): Promise<ReviewMap> {
   }
 }
 
+export async function getAllReviewsList(): Promise<BookReview[]> {
+  const reviews = await getAllReviews();
+  return Object.values(reviews).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 export async function getReview(bookId: string): Promise<BookReview | undefined> {
   const reviews = await getAllReviews();
   return reviews[bookId];

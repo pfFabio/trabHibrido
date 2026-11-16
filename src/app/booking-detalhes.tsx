@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,35 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { installApp, isAppInstalled, uninstallApp } from '@/services/installedApps';
+
+type AppDetailsParams = {
+  id?: string;
+  name?: string;
+  developer?: string;
+  category?: string;
+  rating?: string;
+  downloads?: string;
+  size?: string;
+  color?: string;
+  iconLabel?: string;
+  description?: string;
+};
+
+const DEFAULT_APP = {
+  id: 'booking-com',
+  name: 'Booking.com',
+  developer: 'Booking.com Hotels & Vacation Rentals',
+  category: 'Viagem e Turismo',
+  rating: '4,7',
+  downloads: '500 mi+',
+  size: '66 MB',
+  color: '#003580',
+  iconLabel: 'Booking',
+  description:
+    'Economize na sua próxima viagem com o aplicativo da Booking.com! Encontre ótimas ofertas de hotéis ou apartamentos e reserve em apenas alguns minutos. Pelo aplicativo, você também pode reservar voos, alugar carros e muito mais.',
+};
 
 // 6 Screenshots demonstrativos para o carrossel da Booking
 const BOOKING_SCREENSHOTS = [
@@ -56,8 +84,46 @@ export default function BookingDetailsScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const isPC = windowWidth >= 768;
 
+  const params = useLocalSearchParams<AppDetailsParams>();
+  const app = {
+    id: params.id || DEFAULT_APP.id,
+    name: params.name || DEFAULT_APP.name,
+    developer: params.developer || DEFAULT_APP.developer,
+    category: params.category || DEFAULT_APP.category,
+    rating: params.rating || DEFAULT_APP.rating,
+    downloads: params.downloads || DEFAULT_APP.downloads,
+    size: params.size || DEFAULT_APP.size,
+    color: params.color || DEFAULT_APP.color,
+    iconLabel: params.iconLabel || DEFAULT_APP.iconLabel,
+    description: params.description || DEFAULT_APP.description,
+  };
+
   const [installState, setInstallState] = useState<'idle' | 'installing' | 'installed'>('idle');
   const [progress, setProgress] = useState(0);
+  const installIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      isAppInstalled(app.id).then((installed) => {
+        if (active) {
+          setInstallState(installed ? 'installed' : 'idle');
+          setProgress(installed ? 100 : 0);
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }, [app.id]),
+  );
+
+  useEffect(() => {
+    return () => {
+      if (installIntervalRef.current) {
+        clearInterval(installIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Estados do carrossel de capturas de tela (PC e Mobile)
   const screenshotsScrollRef = useRef<ScrollView>(null);
@@ -89,25 +155,39 @@ export default function BookingDetailsScreen() {
     }
   }, []);
 
-  // Simulação interativa de download e instalação
+  // Simulação interativa de download e instalação persistida no AsyncStorage
   const handleInstall = () => {
-    if (installState === 'idle') {
-      setInstallState('installing');
-      setProgress(10);
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setInstallState('installed');
-            return 100;
-          }
-          return prev + 30;
+    if (installState !== 'idle') return;
+    setInstallState('installing');
+    let current = 10;
+    setProgress(current);
+
+    installIntervalRef.current = setInterval(() => {
+      current += 30;
+      if (current >= 100) {
+        if (installIntervalRef.current) {
+          clearInterval(installIntervalRef.current);
+          installIntervalRef.current = null;
+        }
+        setProgress(100);
+        setInstallState('installed');
+        installApp({
+          id: app.id,
+          name: app.name,
+          developer: app.developer,
+          category: app.category,
+          size: app.size,
+          color: app.color,
+          iconLabel: app.iconLabel,
         });
-      }, 350);
-    }
+      } else {
+        setProgress(current);
+      }
+    }, 350);
   };
 
-  const handleUninstall = () => {
+  const handleUninstall = async () => {
+    await uninstallApp(app.id);
     setInstallState('idle');
     setProgress(0);
   };
@@ -298,27 +378,25 @@ export default function BookingDetailsScreen() {
             /* Versão PC: Título à esquerda e Ícone Grande à direita */
             <View style={styles.pcHeaderContainer}>
               <View style={styles.pcHeaderLeftCol}>
-                <Text style={styles.pcAppTitle}>Booking.com</Text>
+                <Text style={styles.pcAppTitle}>{app.name}</Text>
                 <TouchableOpacity activeOpacity={0.7}>
-                  <Text style={styles.pcDeveloperText}>
-                    Booking.com Hotels & Vacation Rentals
-                  </Text>
+                  <Text style={styles.pcDeveloperText}>{app.developer}</Text>
                 </TouchableOpacity>
 
-                {/* Métricas no Desktop (4,7 ★ e 500 mi+ downloads) */}
+                {/* Métricas no Desktop */}
                 <View style={styles.pcMetricsRow}>
                   <View style={styles.pcMetricItem}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.pcMetricValue}>4,7</Text>
+                      <Text style={styles.pcMetricValue}>{app.rating}</Text>
                       <Ionicons name="star" size={13} color="#E3E3E3" style={{ marginLeft: 3 }} />
                     </View>
-                    <Text style={styles.pcMetricSub}>6,33 mi avaliações</Text>
+                    <Text style={styles.pcMetricSub}>avaliações</Text>
                   </View>
 
                   <View style={styles.pcMetricDivider} />
 
                   <View style={styles.pcMetricItem}>
-                    <Text style={styles.pcMetricValue}>500 mi+</Text>
+                    <Text style={styles.pcMetricValue}>{app.downloads}</Text>
                     <Text style={styles.pcMetricSub}>downloads</Text>
                   </View>
                 </View>
@@ -354,7 +432,7 @@ export default function BookingDetailsScreen() {
 
                       <TouchableOpacity
                         style={styles.pcInstallBtn}
-                        onPress={() => alert('Abrindo Booking.com...')}
+                        onPress={() => alert(`Abrindo ${app.name}...`)}
                         activeOpacity={0.85}
                       >
                         <Text style={styles.pcInstallBtnText}>Abrir</Text>
@@ -390,23 +468,21 @@ export default function BookingDetailsScreen() {
               </View>
 
               {/* Ícone Grande à Direita (Versão PC) */}
-              <View style={styles.pcAppIconBox}>
-                <Text style={styles.pcAppIconText}>Booking</Text>
+              <View style={[styles.pcAppIconBox, { backgroundColor: app.color }]}>
+                <Text style={styles.pcAppIconText}>{app.iconLabel}</Text>
               </View>
             </View>
           ) : (
             /* Versão Mobile (Dark Mode) */
             <>
               <View style={styles.appHeaderRow}>
-                <View style={styles.appIconBox}>
-                  <Text style={styles.appIconText}>Booking</Text>
+                <View style={[styles.appIconBox, { backgroundColor: app.color }]}>
+                  <Text style={styles.appIconText}>{app.iconLabel}</Text>
                 </View>
                 <View style={styles.appTitleCol}>
-                  <Text style={styles.appName}>Booking.com</Text>
+                  <Text style={styles.appName}>{app.name}</Text>
                   <TouchableOpacity activeOpacity={0.7}>
-                    <Text style={styles.developerName}>
-                      Booking.com Hotels & Vacation Rentals
-                    </Text>
+                    <Text style={styles.developerName}>{app.developer}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -415,10 +491,10 @@ export default function BookingDetailsScreen() {
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
                   <View style={styles.statTopRow}>
-                    <Text style={styles.statValue}>4,9</Text>
+                    <Text style={styles.statValue}>{app.rating}</Text>
                     <Ionicons name="star" size={12} color="#E3E3E3" style={{ marginLeft: 3 }} />
                   </View>
-                  <Text style={styles.statSubText}>6 mi avaliações</Text>
+                  <Text style={styles.statSubText}>avaliações</Text>
                 </View>
 
                 <View style={styles.statDivider} />
@@ -437,7 +513,7 @@ export default function BookingDetailsScreen() {
 
                 <View style={styles.statItem}>
                   <MaterialCommunityIcons name="arrow-collapse-down" size={19} color="#E3E3E3" />
-                  <Text style={styles.statSubText}>66 MB</Text>
+                  <Text style={styles.statSubText}>{app.size}</Text>
                 </View>
               </View>
 
@@ -477,7 +553,7 @@ export default function BookingDetailsScreen() {
 
                     <TouchableOpacity
                       style={styles.openBtn}
-                      onPress={() => alert('Abrindo Booking.com...')}
+                      onPress={() => alert(`Abrindo ${app.name}...`)}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.openBtnText}>Abrir</Text>
@@ -555,10 +631,7 @@ export default function BookingDetailsScreen() {
                 </View>
 
                 <Text style={[styles.aboutDescription, isPC && styles.pcAboutDescription]}>
-                  Economize na sua próxima viagem com o aplicativo da Booking.com! Encontre ótimas ofertas de hotéis ou apartamentos e reserve em apenas alguns minutos. Pelo aplicativo, você também pode reservar voos, alugar carros e muito mais.
-                </Text>
-                <Text style={[styles.aboutDescription, isPC && styles.pcAboutDescription, { marginTop: 12 }]}>
-                  Reserve toda a sua viagem em apenas um aplicativo (acomodações, voos, aluguel de carro, táxis e atrações)...
+                  {app.description}
                 </Text>
 
                 {isPC && (
@@ -571,12 +644,12 @@ export default function BookingDetailsScreen() {
                 <View style={styles.tagsRow}>
                   <View style={[styles.tagChip, isPC && styles.pcTagChip]}>
                     <Text style={[styles.tagChipText, isPC && styles.pcTagChipText]}>
-                      #1 principais apps gratuitos Viagem e Turismo
+                      {app.category}
                     </Text>
                   </View>
                   <View style={[styles.tagChip, isPC && styles.pcTagChip]}>
                     <Text style={[styles.tagChipText, isPC && styles.pcTagChipText]}>
-                      Viagem e Turismo
+                      {app.size}
                     </Text>
                   </View>
                 </View>
@@ -639,7 +712,7 @@ export default function BookingDetailsScreen() {
         <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => router.replace('/')}
+            onPress={() => router.replace('/jogos')}
             activeOpacity={0.7}
           >
             <Ionicons name="game-controller-outline" size={22} color="#8E918F" />
@@ -648,7 +721,7 @@ export default function BookingDetailsScreen() {
 
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => router.replace('/')}
+            onPress={() => router.replace('/apps')}
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="view-grid-outline" size={22} color="#8E918F" />

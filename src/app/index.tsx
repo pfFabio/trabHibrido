@@ -190,7 +190,24 @@ export default function SearchScreen() {
           <TouchableOpacity
             style={styles.appCard}
             activeOpacity={0.75}
-            onPress={() => router.push('/booking-detalhes')}
+            onPress={() =>
+              router.push({
+                pathname: '/booking-detalhes',
+                params: {
+                  id: 'shopee-br',
+                  name: 'Shopee: Compre de Tudo Online',
+                  developer: 'Shopee Mobile',
+                  category: 'Compras • Mercado on-line',
+                  rating: '4,8',
+                  downloads: '100 mi+',
+                  size: '103 MB',
+                  color: '#EE4D2D',
+                  iconLabel: 'Shopee',
+                  description:
+                    'Compre de tudo online na Shopee com cupons de frete grátis, ofertas relâmpago diárias, pagamentos seguros pela Garantia Shopee e rastreamento de entregas em tempo real.',
+                },
+              })
+            }
           >
             <Image
               source={{

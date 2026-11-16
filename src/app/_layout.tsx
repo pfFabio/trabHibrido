@@ -64,6 +64,13 @@ export default function RootLayout() {
         }}
       />
       <Stack.Screen
+        name="leitor-amostra"
+        options={{
+          animation: 'slide_from_bottom',
+          animationDuration: 350,
+        }}
+      />
+      <Stack.Screen
         name="booking-detalhes"
         options={{
           animation: 'slide_from_right',

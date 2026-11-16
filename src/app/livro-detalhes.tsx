@@ -273,11 +273,15 @@ export default function BookDetailsScreen() {
   }, []);
 
   const handleFreeSample = () => {
-    if (Platform.OS === 'web') {
-      window.alert(`Amostra gratuita de "${book.shortTitle}" carregada com sucesso!`);
-    } else {
-      Alert.alert('Amostra Gratuita', 'Amostra carregada na sua biblioteca!');
-    }
+    router.push({
+      pathname: '/leitor-amostra',
+      params: {
+        id: wishlistId,
+        title: book.title,
+        author: book.author,
+        synopsis: book.synopsis,
+      },
+    });
   };
 
   const handleConfirmPurchase = () => {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { storage } from '@/services/storage';
 
 interface MenuItem {
   id: string;
@@ -78,6 +79,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
 
   const isWeb = Platform.OS === 'web';
+  const [unreadNotifications, setUnreadNotifications] = useState(3);
 
   // Animações de transição para navegador web (no celular o React Navigation cuida nativamente sem tela branca)
   const slideAnim = React.useRef(new Animated.Value(isWeb ? SCREEN_WIDTH : 0)).current;
@@ -104,6 +106,13 @@ export default function ProfileScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      let active = true;
+      storage.get<string[]>('@playstore:notificacoes-lidas', []).then((readIds) => {
+        if (active) {
+          setUnreadNotifications(Math.max(0, 3 - readIds.length));
+        }
+      });
+
       if (isWeb) {
         Animated.parallel([
           Animated.timing(slideAnim, {
@@ -120,6 +129,9 @@ export default function ProfileScreen() {
           }),
         ]).start();
       }
+      return () => {
+        active = false;
+      };
     }, [isWeb])
   );
 
@@ -155,6 +167,11 @@ export default function ProfileScreen() {
   };
 
   const handleMenuItemPress = (item: MenuItem) => {
+    // Notificações e ofertas: abre a central de notificações com estado lido salvo
+    if (item.id === '2') {
+      router.push('/notificacoes');
+      return;
+    }
     // Biblioteca: abre a lista de desejos de livros salvos no AsyncStorage
     if (item.id === '6') {
       router.push('/biblioteca');
@@ -293,20 +310,28 @@ export default function ProfileScreen() {
 
         {/* Card de Opções de Menu */}
         <View style={styles.menuCard}>
-          {MENU_ITEMS.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.menuRow}
-              activeOpacity={0.7}
-              onPress={() => handleMenuItemPress(item)}
-            >
-              <Ionicons name={item.iconName} size={21} color="#C4C7C5" style={styles.menuIcon} />
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              {item.badge ? (
-                <Text style={styles.badgeText}>{item.badge}</Text>
-              ) : null}
-            </TouchableOpacity>
-          ))}
+          {MENU_ITEMS.map((item) => {
+            const dynamicBadge =
+              item.id === '2'
+                ? unreadNotifications > 0
+                  ? String(unreadNotifications)
+                  : undefined
+                : item.badge;
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.menuRow}
+                activeOpacity={0.7}
+                onPress={() => handleMenuItemPress(item)}
+              >
+                <Ionicons name={item.iconName} size={21} color="#C4C7C5" style={styles.menuIcon} />
+                <Text style={styles.menuTitle}>{item.title}</Text>
+                {dynamicBadge ? (
+                  <Text style={styles.badgeText}>{dynamicBadge}</Text>
+                ) : null}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Card Inferior: Personalização no app Google Play */}

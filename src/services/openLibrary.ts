@@ -1,5 +1,6 @@
 // Camada de Dados: consumo da Open Library API (pública, sem chave)
 // Documentação: https://openlibrary.org/developers/api
+import { comCache } from './cache';
 
 const BASE_URL = 'https://openlibrary.org';
 const COVERS_URL = 'https://covers.openlibrary.org/b/id';
@@ -52,6 +53,16 @@ function mapDoc(doc: SearchDoc): BookSearchResult {
 const SEARCH_FIELDS =
   'key,title,author_name,cover_i,first_publish_year,number_of_pages_median,ratings_average';
 
+async function fetchSearchDocs(url: string, signal?: AbortSignal): Promise<BookSearchResult[]> {
+  const response = await fetch(url, { signal });
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar livros (${response.status})`);
+  }
+
+  const data: { docs: SearchDoc[] } = await response.json();
+  return data.docs.map(mapDoc);
+}
+
 // Pesquisa livros por título, autor ou assunto
 export async function searchBooks(
   query: string,
@@ -61,13 +72,20 @@ export async function searchBooks(
   if (!termo) return [];
 
   const url = `${BASE_URL}/search.json?q=${encodeURIComponent(termo)}&limit=20&fields=${SEARCH_FIELDS}`;
-  const response = await fetch(url, { signal });
-  if (!response.ok) {
-    throw new Error(`Erro ao buscar livros (${response.status})`);
-  }
+  return fetchSearchDocs(url, signal);
+}
 
-  const data: { docs: SearchDoc[] } = await response.json();
-  return data.docs.map(mapDoc);
+// Pesquisa livros por gênero/assunto com cache TTL e fallback offline
+export async function searchBooksBySubject(
+  subject: string,
+  signal?: AbortSignal,
+): Promise<BookSearchResult[]> {
+  const termo = subject.trim().toLowerCase();
+  if (!termo) return [];
+
+  const cacheKey = `@playlivros:cache:subject:${termo}`;
+  const url = `${BASE_URL}/search.json?subject=${encodeURIComponent(termo)}&limit=15&fields=${SEARCH_FIELDS}`;
+  return comCache(cacheKey, () => fetchSearchDocs(url, signal));
 }
 
 // Busca os detalhes de um livro pelo id (ex.: "OL82563W")

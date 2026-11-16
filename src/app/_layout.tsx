@@ -19,6 +19,7 @@ export default function RootLayout() {
     >
       <Stack.Screen name="index" options={{ animation: 'none' }} />
       <Stack.Screen name="jogos" options={{ animation: 'none' }} />
+      <Stack.Screen name="apps" options={{ animation: 'none' }} />
       <Stack.Screen name="livros" options={{ animation: 'none' }} />
       <Stack.Screen
         name="perfil"

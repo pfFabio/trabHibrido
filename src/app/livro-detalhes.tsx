@@ -824,7 +824,7 @@ export default function BookDetailsScreen() {
         <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => router.replace('/')}
+            onPress={() => router.replace('/jogos')}
             activeOpacity={0.7}
           >
             <Ionicons name="game-controller-outline" size={22} color="#8E918F" />
@@ -833,7 +833,7 @@ export default function BookDetailsScreen() {
 
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => router.replace('/')}
+            onPress={() => router.replace('/apps')}
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="view-grid-outline" size={22} color="#8E918F" />

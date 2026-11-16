@@ -360,7 +360,7 @@ export default function GamesScreen() {
 
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => router.replace('/')}
+            onPress={() => router.replace('/apps')}
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="view-grid-outline" size={22} color={colors.textMuted} />

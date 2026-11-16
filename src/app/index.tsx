@@ -214,7 +214,12 @@ export default function SearchScreen() {
           <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Explorar apps</Text>
           <View style={styles.grid}>
             {APP_CATEGORIES.map((item) => (
-              <TouchableOpacity key={item.id} style={styles.categoryCard} activeOpacity={0.75}>
+              <TouchableOpacity
+                key={item.id}
+                style={styles.categoryCard}
+                activeOpacity={0.75}
+                onPress={() => router.push({ pathname: '/apps', params: { category: item.name } })}
+              >
                 <Text style={styles.categoryText} numberOfLines={1}>
                   {item.name}
                 </Text>
@@ -239,7 +244,7 @@ export default function SearchScreen() {
           {/* Tab 2: Apps */}
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => setActiveTab('apps')}
+            onPress={() => router.replace('/apps')}
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="view-grid-outline" size={22} color="#8E918F" />
